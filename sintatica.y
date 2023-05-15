@@ -53,7 +53,7 @@ COMANDO 	: E ';'
 E 			: E '+' E
 			{
 				$$.label = genTemp();
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + "=" + $1.label + " + " + $3.label + ";\n";
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " + " + $3.label + ";\n";
 			}
 			| TK_NUM
 			{

@@ -1339,7 +1339,7 @@ yyreduce:
 #line 54 "sintatica.y"
                         {
 				yyval.label = genTemp();
-				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\t" + yyval.label + "=" + yyvsp[-2].label + " + " + yyvsp[0].label + ";\n";
+				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\t" + yyval.label + " = " + yyvsp[-2].label + " + " + yyvsp[0].label + ";\n";
 			}
 #line 1345 "y.tab.c"
     break;
