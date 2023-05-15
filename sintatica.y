@@ -7,6 +7,8 @@
 
 using namespace std;
 
+int temp;
+
 struct atributos
 {
 	string label;
@@ -48,13 +50,19 @@ COMANDO 	: E ';'
 
 E 			: E '+' E
 			{
-				$$.traducao = $1.traducao + $3.traducao + "\ta = b + c;\n";
+				$$.label = genTemp();
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + "=" + $1.label + " + " + $3.label + ";\n";
 			}
 			| TK_NUM
 			{
-				$$.traducao = "\ta = " + $1.traducao + ";\n";
+				$$.label = genTemp();
+				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
 			}
 			| TK_ID
+			{
+				$$.label = genTemp();
+				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+			}
 			;
 
 %%
@@ -63,8 +71,15 @@ E 			: E '+' E
 
 int yyparse();
 
+string genTemp()
+{
+	temp++;
+	return "t" + std::to_string(temp);
+}
+
 int main( int argc, char* argv[] )
 {
+	temp = 0;
 	yyparse();
 
 	return 0;
