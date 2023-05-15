@@ -9,6 +9,8 @@ using namespace std;
 
 int temp;
 
+string genTemp();
+
 struct atributos
 {
 	string label;

@@ -76,6 +76,10 @@
 
 using namespace std;
 
+int temp;
+
+string genTemp();
+
 struct atributos
 {
 	string label;
@@ -85,7 +89,7 @@ struct atributos
 int yylex(void);
 void yyerror(string);
 
-#line 89 "y.tab.c"
+#line 93 "y.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -524,7 +528,7 @@ static const yytype_int8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int8 yyrline[] =
 {
-       0,    30,    30,    36,    42,    43,    46,    49,    53,    57
+       0,    34,    34,    40,    46,    47,    50,    53,    58,    63
 };
 #endif
 
@@ -1316,39 +1320,50 @@ yyreduce:
   switch (yyn)
     {
   case 2:
-#line 31 "sintatica.y"
+#line 35 "sintatica.y"
                         {
 				cout << "/*Compilador FOCA*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << yyvsp[0].traducao << "\treturn 0;\n}" << endl; 
 			}
-#line 1324 "y.tab.c"
+#line 1328 "y.tab.c"
     break;
 
   case 3:
-#line 37 "sintatica.y"
+#line 41 "sintatica.y"
                         {
 				yyval.traducao = yyvsp[-1].traducao;
 			}
-#line 1332 "y.tab.c"
+#line 1336 "y.tab.c"
     break;
 
   case 7:
-#line 50 "sintatica.y"
+#line 54 "sintatica.y"
                         {
-				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\ta = b + c;\n";
+				yyval.label = genTemp();
+				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\t" + yyval.label + "=" + yyvsp[-2].label + " + " + yyvsp[0].label + ";\n";
 			}
-#line 1340 "y.tab.c"
+#line 1345 "y.tab.c"
     break;
 
   case 8:
-#line 54 "sintatica.y"
+#line 59 "sintatica.y"
                         {
-				yyval.traducao = "\ta = " + yyvsp[0].traducao + ";\n";
+				yyval.label = genTemp();
+				yyval.traducao = "\t" + yyval.label + " = " + yyvsp[0].label + ";\n";
 			}
-#line 1348 "y.tab.c"
+#line 1354 "y.tab.c"
+    break;
+
+  case 9:
+#line 64 "sintatica.y"
+                        {
+				yyval.label = genTemp();
+				yyval.traducao = "\t" + yyval.label + " = " + yyvsp[0].label + ";\n";
+			}
+#line 1363 "y.tab.c"
     break;
 
 
-#line 1352 "y.tab.c"
+#line 1367 "y.tab.c"
 
       default: break;
     }
@@ -1580,15 +1595,22 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 60 "sintatica.y"
+#line 70 "sintatica.y"
 
 
 #include "lex.yy.c"
 
 int yyparse();
 
+string genTemp()
+{
+	temp++;
+	return "t" + std::to_string(temp);
+}
+
 int main( int argc, char* argv[] )
 {
+	temp = 0;
 	yyparse();
 
 	return 0;
