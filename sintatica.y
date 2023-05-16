@@ -22,12 +22,12 @@ void yyerror(string);
 %}
 
 %token TK_NUM
-%token TK_MAIN TK_ID TK_TIPO_INT
+%token TK_MAIN TK_ID TK_TIPO_INT TK_EQUAL
 %token TK_FIM TK_ERROR
 
 %start S
 
-%left '+'
+%left '+' 
 
 %%
 
@@ -48,8 +48,14 @@ COMANDOS	: COMANDO COMANDOS
 			;
 
 COMANDO 	: E ';'
+			{}
+			| TK_ID '=' E ';'
+			{	
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $3.label + ";\n";
+			}
 			;
 
+			 
 E 			: E '+' E
 			{
 				$$.label = genTemp();
