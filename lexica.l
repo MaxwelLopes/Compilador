@@ -3,7 +3,7 @@
 
 %}
 
-ESPACO [ \t]
+ESPACO [ \t] 
 DIGITO [0-9]
 LETRA [A-Za-z_]
 
@@ -23,12 +23,16 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "int"		{return TK_TIPO_INT;}
 
+"float"		{return TK_TIPO_FLOAT;}
+
 [(){}[\];,]	{ return *yytext; }
 
 [+\-*/=]		{ return *yytext; }
 
+
 {NUM}		{ yylval.label = yytext; return TK_NUM; }
 {ID}		{ yylval.label = yytext; return TK_ID; }
+{REAL}      { yylval.label = yytext; return TK_REAL; }
 
 .			{ *yytext; }
 
