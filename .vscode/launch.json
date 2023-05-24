@@ -14,20 +14,22 @@
       "pipeTransport": {
         "debuggerPath": "/usr/bin/gdb",
         "pipeProgram": "${env:windir}\\system32\\bash.exe",
-        "pipeArgs": ["-c"],
+        "pipeArgs": [
+          "-c"
+        ],
         "pipeCwd": ""
       },
       "setupCommands": [
-          {
-              "description": "Habilitar a reformatação automática para gdb",
-              "text": "-enable-pretty-printing",
-              "ignoreFailures": true
-          },
-          {
-              "description": "Definir Tipo de Desmontagem como Intel",
-              "text": "-gdb-set disassembly-flavor intel",
-              "ignoreFailures": true
-          }
+        {
+          "description": "Habilitar a reformatação automática para gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Definir Tipo de Desmontagem como Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
       ]
     },
     {
@@ -38,16 +40,16 @@
       "MIMode": "gdb",
       "miDebuggerPath": "/path/to/gdb",
       "setupCommands": [
-          {
-              "description": "Habilitar a reformatação automática para gdb",
-              "text": "-enable-pretty-printing",
-              "ignoreFailures": true
-          },
-          {
-              "description": "Definir Tipo de Desmontagem como Intel",
-              "text": "-gdb-set disassembly-flavor intel",
-              "ignoreFailures": true
-          }
+        {
+          "description": "Habilitar a reformatação automática para gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Definir Tipo de Desmontagem como Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        }
       ]
     },
     {
@@ -56,9 +58,9 @@
       "request": "launch",
       "args": [],
       "stopAtEntry": false,
-      "externalConsole": true,
-      "cwd": "c:/Users/maxwe/OneDrive/Documentos/GitHub/Compiladores",
-      "program": "c:/Users/maxwe/OneDrive/Documentos/GitHub/Compiladores/build/Debug/outDebug",
+      "externalConsole": false,
+      "cwd": "/mnt/c/Users/maxwe/OneDrive/Documentos/GitHub/Compiladores",
+      "program": "/mnt/c/Users/maxwe/OneDrive/Documentos/GitHub/Compiladores/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

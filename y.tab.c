@@ -98,12 +98,10 @@ typedef struct{
 unordered_map<string, TIPO_SIMBOLO> tabelaSimbolos;
 int temp;
 
-string declaracoesTemporarias = "";
-
 int yylex(void);
 void yyerror(string);
 
-#line 107 "y.tab.c"
+#line 105 "y.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -546,8 +544,8 @@ static const yytype_int8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    49,    49,    58,    64,    69,    74,    78,    93,   109,
-     114,   119,   124,   129,   136,   143,   149
+       0,    47,    47,    53,    59,    64,    69,    73,    88,   103,
+     108,   113,   118,   123,   130,   137,   143
 };
 #endif
 
@@ -1353,49 +1351,47 @@ yyreduce:
   switch (yyn)
     {
   case 2:
-#line 50 "sintatica.y"
+#line 48 "sintatica.y"
                         {
-				cout << "/*Compilador CAPY*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n";
-				cout << declaracoesTemporarias;
-				cout << yyvsp[0].traducao << "\treturn 0;\n}" << endl; 
+				cout << "/*Compilador CAPY*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << yyvsp[0].traducao << "\treturn 0;\n}" << endl; 
 			}
-#line 1363 "y.tab.c"
+#line 1359 "y.tab.c"
     break;
 
   case 3:
-#line 59 "sintatica.y"
+#line 54 "sintatica.y"
                         {
 				yyval.traducao = yyvsp[-1].traducao;
 			}
-#line 1371 "y.tab.c"
+#line 1367 "y.tab.c"
     break;
 
   case 4:
-#line 65 "sintatica.y"
+#line 60 "sintatica.y"
                         {
 				yyval.traducao = yyvsp[-1].traducao + yyvsp[0].traducao;
 			}
-#line 1379 "y.tab.c"
+#line 1375 "y.tab.c"
     break;
 
   case 5:
-#line 69 "sintatica.y"
+#line 64 "sintatica.y"
                         {
 				yyval.traducao = "";
 			}
-#line 1387 "y.tab.c"
+#line 1383 "y.tab.c"
     break;
 
   case 6:
-#line 75 "sintatica.y"
+#line 70 "sintatica.y"
                         {
 				
 			}
-#line 1395 "y.tab.c"
+#line 1391 "y.tab.c"
     break;
 
   case 7:
-#line 79 "sintatica.y"
+#line 74 "sintatica.y"
                         {
 				declarado(yyvsp[-1].label);
 				TIPO_SIMBOLO var;
@@ -1407,14 +1403,14 @@ yyreduce:
 				
 				yyval.tipo = var.tipo;
 
-				declaracoesTemporarias += "\t" + yyval.tipo + " " + var.nome + ";\n";
+				yyval.traducao = "\t" + yyval.tipo + " " + var.nome + ";\n";
 				yyval.label = "";
 			}
-#line 1414 "y.tab.c"
+#line 1410 "y.tab.c"
     break;
 
   case 8:
-#line 94 "sintatica.y"
+#line 89 "sintatica.y"
                         {
 				declarado(yyvsp[-1].label);
 				TIPO_SIMBOLO var;
@@ -1425,95 +1421,95 @@ yyreduce:
 				
 				yyval.tipo = var.tipo;
 
-				declaracoesTemporarias += "\t" + yyval.tipo + " " + var.nome + ";\n";
+				yyval.traducao = "\t" + yyval.tipo + " " + var.nome + ";\n";
 			}
-#line 1431 "y.tab.c"
+#line 1427 "y.tab.c"
     break;
 
   case 9:
-#line 110 "sintatica.y"
+#line 104 "sintatica.y"
                         {
 				yyval.label = genTemp();
-				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\t" + yyval.tipo + " " + yyval.label + ";\n\t" + yyval.label +  " = " + yyvsp[-2].label + " + " + yyvsp[0].label + ";\n"; 
+				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\t" + yyval.label + " = " + yyvsp[-2].label + " + " + yyvsp[0].label + ";\n"; 
 			}
-#line 1440 "y.tab.c"
+#line 1436 "y.tab.c"
     break;
 
   case 10:
-#line 115 "sintatica.y"
+#line 109 "sintatica.y"
                         {
 				yyval.label = genTemp();
 				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\t" + yyval.label + " = " + yyvsp[-2].label + " - " + yyvsp[0].label + ";\n";
 			}
-#line 1449 "y.tab.c"
+#line 1445 "y.tab.c"
     break;
 
   case 11:
-#line 120 "sintatica.y"
+#line 114 "sintatica.y"
                         {
 				yyval.label = genTemp();
 				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\t" + yyval.label + " = " + yyvsp[-2].label + " / " + yyvsp[0].label + ";\n";
 			}
-#line 1458 "y.tab.c"
+#line 1454 "y.tab.c"
     break;
 
   case 12:
-#line 125 "sintatica.y"
+#line 119 "sintatica.y"
                         {
 				yyval.label = genTemp();
 				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\t" + yyval.label + " = " + yyvsp[-2].label + " * " + yyvsp[0].label + ";\n";
 			}
-#line 1467 "y.tab.c"
+#line 1463 "y.tab.c"
     break;
 
   case 13:
-#line 130 "sintatica.y"
+#line 124 "sintatica.y"
                         {	
 				
 				naoDeclarado(yyvsp[-2].label);
 				
 				yyval.traducao = yyvsp[-2].traducao + yyvsp[0].traducao + "\t" + yyvsp[-2].label + " = " + yyvsp[0].label + ";\n";
 			}
-#line 1478 "y.tab.c"
+#line 1474 "y.tab.c"
     break;
 
   case 14:
-#line 137 "sintatica.y"
+#line 131 "sintatica.y"
                         {
 				yyval.tipo = "int";
 				yyval.label = genTemp();
 
-				yyval.traducao = "\t" + yyval.tipo + " " + yyval.label + ";\n" + "\t" + yyval.label + " = " + yyvsp[0].label + ";\n";
+				yyval.traducao = "\t" + yyval.label + " = " + yyvsp[0].label + ";\n";
 			}
-#line 1489 "y.tab.c"
+#line 1485 "y.tab.c"
     break;
 
   case 15:
-#line 144 "sintatica.y"
+#line 138 "sintatica.y"
                         {
 				yyval.tipo = "float";
 				yyval.label = genTemp();
 				yyval.traducao = "\t" + yyval.label + " = " + yyvsp[0].label + ";\n";
 			}
-#line 1499 "y.tab.c"
+#line 1495 "y.tab.c"
     break;
 
   case 16:
-#line 150 "sintatica.y"
+#line 144 "sintatica.y"
                         {
 
 				naoDeclarado(yyvsp[0].label);
 				TIPO_SIMBOLO var;
 				
-
+				yyval.tipo = var.tipo;
 				yyval.label = genTemp();
 				yyval.traducao = "\t"  + yyval.label + " = " + yyvsp[0].label + ";\n";
 			}
-#line 1513 "y.tab.c"
+#line 1509 "y.tab.c"
     break;
 
 
-#line 1517 "y.tab.c"
+#line 1513 "y.tab.c"
 
       default: break;
     }
@@ -1745,7 +1741,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 161 "sintatica.y"
+#line 155 "sintatica.y"
 
 
 #include "lex.yy.c"
