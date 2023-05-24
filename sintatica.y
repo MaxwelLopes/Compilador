@@ -103,7 +103,7 @@ COMANDO 	: E ';'
 E 			: E '+' E
 			{
 				$$.label = genTemp();
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " + " + $3.label + ";\n"; 
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.tipo + " " + $$.label + "\n" + " = " + $1.label + " + " + $3.label + ";\n"; 
 			}
 			| E '-' E
 			{
@@ -132,7 +132,7 @@ E 			: E '+' E
 				$$.tipo = "int";
 				$$.label = genTemp();
 
-				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.traducao = "\t" + $$.tipo + " " + $$.label + ";\n" + "\t" + $$.label + " = " + $1.label + ";\n";
 			}
 			| TK_REAL 
 			{
@@ -146,7 +146,7 @@ E 			: E '+' E
 				naoDeclarado($1.label);
 				TIPO_SIMBOLO var;
 				
-				$$.tipo = var.tipo;
+
 				$$.label = genTemp();
 				$$.traducao = "\t"  + $$.label + " = " + $1.label + ";\n";
 			}
