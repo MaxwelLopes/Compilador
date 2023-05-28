@@ -26,30 +26,20 @@ int main(){
     variavel1.tipo = "int";
 
     variavel2.nome = "b";
-    variavel2.tipo = "float";
+ 
     
     tabelaSimbolos[variavel1.nome] = variavel1;
     tabelaSimbolos[variavel2.nome] = variavel2;
 
-    string chave1 = "hugo";
+    string chave1 = "a";
     string chave2 = "b";
-    string chave3 = "a";
 
     identifica_chave(chave1);
     identifica_chave(chave2);
-    identifica_chave(chave3);
 
+    tabelaSimbolos[variavel2.nome].tipo = "float";
 
-    TIPO_SIMBOLO variavel3;
-    variavel3.nome = "hugo";
-    variavel3.tipo = "estranho";
-    tabelaSimbolos[variavel3.nome] = variavel3;
-    
-    tabelaSimbolos.erase(chave2);
-
-    identifica_chave(chave1);
     identifica_chave(chave2);
-    identifica_chave(chave3);
 
     return 0;
 }
