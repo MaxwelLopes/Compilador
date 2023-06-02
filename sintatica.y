@@ -84,7 +84,6 @@ COMANDO     : E ';'
                 TIPO_SIMBOLO var;
                 var.nome = $2.label;
                 var.tipo = "int";
-				
 				var.temp = genTemp();
 
                 tabelaSimbolos[var.nome] = var;
@@ -266,7 +265,7 @@ E           : E '+' E
             | TK_ID '=' E 
             {   
                 naoDeclarado($1.label);
-				verificaTipo(tabelaSimbolos[$1.label].tipo, $3.tipo);
+				//verificaTipo(tabelaSimbolos[$1.label].tipo, $3.tipo);
                 $$.traducao = $1.traducao + $3.traducao + "\t" + tabelaSimbolos[$1.label].temp + " = " + $3.label + ";\n";
                 $$.declaracao = $1.declaracao + $3.declaracao;
             }
