@@ -31,7 +31,8 @@ ID {LETRA}({LETRA}|{NUM})*
 
 [+\-*/=]		{ return *yytext; }
 
-
+"True"      { yylval.label = yytext; return TK_TRUE; }
+"False"     { yylval.label = yytext; return TK_FALSE; }
 {NUM}		{ yylval.label = yytext; return TK_NUM; }
 {ID}		{ yylval.label = yytext; return TK_ID; }
 {REAL}      { yylval.label = yytext; return TK_REAL; }

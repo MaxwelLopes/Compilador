@@ -37,8 +37,8 @@ int yylex(void);
 void yyerror(string);
 %}
 
-%token TK_NUM TK_REAL
-%token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL
+%token TK_NUM TK_REAL TK_TRUE TK_FALSE
+%token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL 
 %token TK_FIM TK_ERROR
 
 %start S
@@ -106,9 +106,27 @@ COMANDO     : E ';'
                 $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + "\n";
                 $$.traducao = "";
             }
+			| TK_TIPO_BOOL TK_ID ';'
+            {
+                declarado($2.label);
+                TIPO_SIMBOLO var;
+                var.nome = $2.label;
+                var.tipo = "bool";
+				
+				var.temp = genTemp();
+
+                tabelaSimbolos[var.nome] = var;
+
+                $$.tipo = var.tipo;
+                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + "\n";
+                $$.traducao = "";
+            }
             ;
 
-E		   :
+E		   : E '>' E
+            {	
+				operacao($$,$1,$2,$3, ">");
+            }
 			| E '+' E
             {	
 				operacao($$,$1,$2,$3, "+");
@@ -128,6 +146,12 @@ E		   :
             | TK_ID '=' E
             {   
                 naoDeclarado($1.label);
+				if(tabelaSimbolos[$1.label].tipo == "bool" && $3.tipo != "bool"){
+					yyerror("Tipos diferentes");
+				}
+				if(tabelaSimbolos[$1.label].tipo != "bool" && $3.tipo == "bool"){
+					yyerror("Tipos diferentes");
+				}
 				if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
 					$3.tipo = "float";
 					$$.label = genTemp();
@@ -163,6 +187,20 @@ E		   :
                 $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
                 $$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
             }
+			| TK_FALSE
+            {
+                $$.tipo = "bool";
+                $$.label = genTemp();
+                $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
+                $$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
+            }
+			| TK_TRUE
+            {
+                $$.tipo = "bool";
+                $$.label = genTemp();
+                $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
+                $$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
+            }
 			| '(' TK_TIPO ')' E
             {   
 					$$.tipo = $2.tipo;
@@ -188,7 +226,6 @@ E		   :
                 TIPO_SIMBOLO var = tabelaSimbolos[$1.label];
                 $$.tipo = var.tipo;
             }
-			| TK_NUM ';' { yyerror("Número não pode ser utilizado sozinho."); }
     		;
 TK_TIPO     : TK_TIPO_FLOAT 
             {
@@ -198,7 +235,7 @@ TK_TIPO     : TK_TIPO_FLOAT
             {
               	$$.tipo = "int";  
             }
-            ;
+			;
 
 %%
 
