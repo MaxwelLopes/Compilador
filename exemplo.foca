@@ -1,6 +1,5 @@
 int main()
 {
-	//autor hugo vidal
-	int for;
+	int a;
+	a = 5 + 5;
 }
-

@@ -13,14 +13,13 @@ struct atributos
     string label;
     string traducao;
     string declaracao;
-    string tipo;
+    string tipo;	
 };
 
 void naoDeclarado(string chave);
 void declarado(string chave);
-void verificaTipo(string tipo1, string tipo2);
-void verificarTipoIntFloat(atributos& $1, atributos& $3, atributos& $$);
 string genTemp();
+void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string operador);
 
 // Struct de cada tipo
 typedef struct
@@ -33,7 +32,6 @@ typedef struct
 // Criando tabela de símbolos usando Hash (key: 'string', valor: 'struct')
 unordered_map<string, TIPO_SIMBOLO> tabelaSimbolos;
 int temp;
-string idTemp;
 
 int yylex(void);
 void yyerror(string);
@@ -46,7 +44,7 @@ void yyerror(string);
 %start S
 
 %left '+' '-'
-%left '/' '*'
+%left '*' '/'
 
 %%
 
@@ -110,646 +108,79 @@ COMANDO     : E ';'
             }
             ;
 
-E           : E '+' E
+E		   :
+			| E '+' E
             {	
-				//NUMERO NUMERO
-				if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-					if($1.tipo == "int" && $3.tipo == "float"){
-						$1.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + $1.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " + " + $3.label + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-				}
-					else if($1.tipo == "float" && $3.tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + $1.label + " + " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = $1.tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " + " + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//VAR NUMERO
-				else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end()) && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-					if(tabelaSimbolos[$1.label].tipo == "int" && $3.tipo == "float"){
-						$$.label = genTemp();
-						$$.tipo = "float";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " + " + $3.label + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " + " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$1.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " + " + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//NUMERO VAR/*
-				else if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && !(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-					if($1.tipo == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" + $1.label + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " + " + tabelaSimbolos[$3.label].temp + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if($1.tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + $1.label + " + " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$3.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " + " + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//VAR VAR
-				else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-					if(tabelaSimbolos[$1.label].tipo  == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" +tabelaSimbolos[$1.label].temp + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " + " + tabelaSimbolos[$3.label].temp + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if(tabelaSimbolos[$1.label].tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.tipo = "float";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$1.label].tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " + " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$1.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " + " + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
+				operacao($$,$1,$2,$3, "+");
             }
             | E '-' E
             {
-				//NUMERO NUMERO
-				if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-					if($1.tipo == "int" && $3.tipo == "float"){
-						$1.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + $1.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " - " + $3.label + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-				}
-					else if($1.tipo == "float" && $3.tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + $1.label + " - " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = $1.tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " - " + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//VAR NUMERO
-				else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end()) && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-					if(tabelaSimbolos[$1.label].tipo == "int" && $3.tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " - " + $3.label + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " - " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$1.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " - " + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//NUMERO VAR/*
-				else if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && !(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-					if($1.tipo == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" + $1.label + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " - " + tabelaSimbolos[$3.label].temp + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if($1.tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + $1.label + " - " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$3.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " - " + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//VAR VAR
-				else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-					if(tabelaSimbolos[$1.label].tipo  == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" +tabelaSimbolos[$1.label].temp + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " - " + tabelaSimbolos[$3.label].temp + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if(tabelaSimbolos[$1.label].tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$1.label].tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " - " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$1.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " - " + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-
+				operacao($$,$1,$2,$3, "-");
             }
             | E '*' E
             {	//diferentes
-				//NUMERO NUMERO
-				if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-					if($1.tipo == "int" && $3.tipo == "float"){
-						$1.tipo = "float";
-						$$.label = genTemp();
-						
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + $1.tipo + ")" + $1.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " * " + $3.label + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-				}
-					else if($1.tipo == "float" && $3.tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + $1.label + " * " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = $1.tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " * " + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//VAR NUMERO
-				else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end()) && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-					if(tabelaSimbolos[$1.label].tipo == "int" && $3.tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " * " + $3.label + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " * " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$1.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " * " + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//NUMERO VAR/*
-				else if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && !(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-					if($1.tipo == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" + $1.label + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " * " + tabelaSimbolos[$3.label].temp + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if($1.tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + $1.label + " * " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$3.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " * " + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//VAR VAR
-				else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-					if(tabelaSimbolos[$1.label].tipo  == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" +tabelaSimbolos[$1.label].temp + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " * " + tabelaSimbolos[$3.label].temp + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if(tabelaSimbolos[$1.label].tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + tabelaSimbolos[$1.label].tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " * " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$1.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " * " + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
+				operacao($$,$1,$2,$3, "*");
             }
 			| E '/' E
             {
-				//NUMERO NUMERO
-				if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-					if($1.tipo == "int" && $3.tipo == "float"){
-						$1.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + $1.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " / " + $3.label + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-				}
-					else if($1.tipo == "float" && $3.tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + $1.label + " / " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = $1.tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " / " + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//VAR NUMERO
-				else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end()) && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-					if(tabelaSimbolos[$1.label].tipo == "int" && $3.tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " / " + $3.label + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " / " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$1.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " / " + $3.label + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//NUMERO VAR/*
-				else if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && !(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-					if($1.tipo == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" + $1.label + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " / " + tabelaSimbolos[$3.label].temp + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if($1.tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + $1.label + " / " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = tabelaSimbolos[$3.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " / " + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
-				//VAR VAR
-				else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-					if(tabelaSimbolos[$1.label].tipo  == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-						$$.label = genTemp();
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" +tabelaSimbolos[$1.label].temp + ";\n";
-
-						string aux = $$.label;
-						
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + aux + " / " + tabelaSimbolos[$3.label].temp + ";\n";
-					 	$$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-				}
-					else if(tabelaSimbolos[$1.label].tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-						$3.tipo = "float";
-						$$.label = genTemp();
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$1.label].tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-						string aux = $$.label;
-
-						$$.label = genTemp();
-						$$.tipo = "float";
-
-						$$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " / " + aux + ";\n";
-						$$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-					//IGUAIS
-					else {
-						$$.label = genTemp();
-						$$.tipo = $1.tipo;
-						$$.tipo = tabelaSimbolos[$1.label].tipo;
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " / " + tabelaSimbolos[$3.label].temp + ";\n";
-						$$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-					}
-				}
+				operacao($$,$1,$2,$3, "/");
             }
-            | TK_ID '=' E 
+            | TK_ID '=' E
             {   
                 naoDeclarado($1.label);
-				//verificaTipo(tabelaSimbolos[$1.label].tipo, $3.tipo);
-                $$.traducao = $1.traducao + $3.traducao + "\t" + tabelaSimbolos[$1.label].temp + " = " + $3.label + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao;
+				if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
+					$3.tipo = "float";
+					$$.label = genTemp();
+					$$.declaracao += $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
+					$$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + $3.tipo + ")" + $3.label + ";\n";
+					$$.traducao += "\t" + tabelaSimbolos[$1.label].temp + " = " + $$.label + ";\n";
+				}
+				else if(tabelaSimbolos[$1.label].tipo == "int" && $3.tipo == "float"){
+					$3.tipo = "int";
+					$$.label = genTemp();
+					$$.declaracao += $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
+					$$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + $3.tipo + ")" + $3.label + ";\n";
+					$$.traducao += "\t" + tabelaSimbolos[$1.label].temp + " = " + $$.label + ";\n";
+				}
+				//IGUAIS
+				else{
+					$$.declaracao = $1.declaracao + $3.declaracao;
+					$$.traducao = $1.traducao + $3.traducao + "\t" + tabelaSimbolos[$1.label].temp + " = " + $3.label + ";\n";
+				}
+                
             }
             | TK_NUM
             {
-                $$.tipo = "int";
-                $$.label = genTemp();
-                $$.declaracao = "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.tipo = "int";
+				$$.label = genTemp();
+				$$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
+				$$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
             }
             | TK_REAL 
             {
                 $$.tipo = "float";
                 $$.label = genTemp();
-                $$.declaracao = "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+                $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
+                $$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
             }
-			| '(' TK_TIPO_FLOAT ')' E
+			| '(' TK_TIPO ')' E
             {   
-					$$.tipo = "float";
+					$$.tipo = $2.tipo;
+					
 					$$.label = genTemp();
-					$$.declaracao = "\t" + $$.tipo + " " + $$.label + ";\n";
-					$$.traducao += "\t" + $$.label + " = "  + "(" + $$.tipo + ")"  + $$.label + ";\n";
+					$$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
+
+					//CAST VAR
+					if(!(tabelaSimbolos.find($4.label) == tabelaSimbolos.end()))
+					{
+						$$.traducao += "\t" + $$.label + " = "  + "(" + $$.tipo + ")"  + tabelaSimbolos[$4.label].temp + ";\n";
+					}
+					//CAST NUM
+					else if(tabelaSimbolos.find($4.label) == tabelaSimbolos.end())
+					{
+                		$$.declaracao += $1.declaracao + $4.declaracao;
+						$$.traducao += $1.traducao + $4.traducao + "\t" + $$.label + " = "  + "(" + $$.tipo + ")"  + $4.label + ";\n";
+					}
             }
             | TK_ID
             {
@@ -758,6 +189,15 @@ E           : E '+' E
                 $$.tipo = var.tipo;
             }
 			;
+TK_TIPO     : TK_TIPO_FLOAT 
+            {
+            	$$.tipo = "float";
+            }
+            | TK_TIPO_INT
+            {
+              	$$.tipo = "int";  
+            }
+            ;
 
 %%
 
@@ -781,19 +221,156 @@ void naoDeclarado(string chave){
 		yyerror("Variável " + chave + " não foi declarada!");
 }
 
-void verificaTipo(string tipo1, string tipo2){
-	if(tipo1 != tipo2){
-		yyerror("Tipos diferentes!");
-	}	
-}
+void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string operador){
+    if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
+        if($1.tipo == "int" && $3.tipo == "float"){
+            $1.tipo = "float";
+            $$.label = genTemp();
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + $1.label + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
 
-void verificarTipoIntFloat(atributos& $1, atributos& $3, atributos& $$) {
-    if ($1.tipo == "int" && $3.tipo == "float") {
-        $1.tipo = "float";
-        $$ = atributos();
-        $$.label = genTemp();
-        $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + $1.tipo + ")" + $1.label + ";\n";
-        $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
+            string aux = $$.label;
+
+            $$.label = genTemp();
+            $$.tipo = "float";
+
+            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
+            $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
+        }
+        else if($1.tipo == "float" && $3.tipo == "int"){
+            $3.tipo = "float";
+            $$.label = genTemp();
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
+
+            string aux = $$.label;
+
+            $$.label = genTemp();
+            $$.tipo = "float";
+
+            $$.traducao += "\t" + $$.label + " = " + $1.label + " " + operador + " " + aux + ";\n";
+            $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
+        }
+        //IGUAIS
+        else {
+            $$.label = genTemp();
+            $$.tipo = $1.tipo;
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
+        }
+    }
+    //VAR NUMERO
+    else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end()) && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
+        if(tabelaSimbolos[$1.label].tipo == "int" && $3.tipo == "float"){
+            $$.label = genTemp();
+            $$.tipo = "float";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
+
+            string aux = $$.label;
+            
+            $$.label = genTemp();
+            $$.tipo = "float";
+
+            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
+            $$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
+    }
+        else if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
+            $3.tipo = "float";
+            $$.label = genTemp();
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
+
+            string aux = $$.label;
+
+            $$.label = genTemp();
+            $$.tipo = "float";
+
+            $$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + aux + ";\n";
+            $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
+        }
+        //IGUAIS
+        else {
+            $$.label = genTemp();
+            $$.tipo = tabelaSimbolos[$1.label].tipo;
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + $3.label + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
+        }
+    }
+    //NUMERO VAR/*
+    else if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && !(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
+        if($1.tipo == "int" && tabelaSimbolos[$3.label].tipo == "float"){
+            $$.label = genTemp();
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" + $1.label + ";\n";
+
+            string aux = $$.label;
+            
+            $$.label = genTemp();
+            $$.tipo = "float";
+
+            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
+            $$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
+        }
+        else if($1.tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
+            $3.tipo = "float";
+            $$.label = genTemp();
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
+
+            string aux = $$.label;
+
+            $$.label = genTemp();
+            $$.tipo = "float";
+
+            $$.traducao += "\t" + $$.label + " = " + $1.label + " " + operador + " " + aux + ";\n";
+            $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
+        }
+    //IGUAIS
+        else {
+            $$.label = genTemp();
+            $$.tipo = tabelaSimbolos[$3.label].tipo;
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
+        }
+    }
+    //VAR VAR
+    else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
+        if(tabelaSimbolos[$1.label].tipo  == "int" && tabelaSimbolos[$3.label].tipo == "float"){
+            $$.label = genTemp();
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" +tabelaSimbolos[$1.label].temp + ";\n";
+
+            string aux = $$.label;
+            
+            $$.label = genTemp();
+            $$.tipo = "float";
+
+            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
+            $$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
+        }
+        else if(tabelaSimbolos[$1.label].tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
+            $3.tipo = "float";
+            $$.label = genTemp();
+            $$.tipo = "float";
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$1.label].tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
+
+            string aux = $$.label;
+
+            $$.label = genTemp();
+            $$.tipo = "float";
+
+            $$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + aux + ";\n";
+            $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
+        }
+        //IGUAIS
+        else {
+            $$.label = genTemp();
+            $$.tipo = tabelaSimbolos[$1.label].tipo;
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
+        }
     }
 }
 
