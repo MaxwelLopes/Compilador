@@ -38,7 +38,7 @@ void yyerror(string);
 %}
 
 %token TK_NUM TK_REAL
-%token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT
+%token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL
 %token TK_FIM TK_ERROR
 
 %start S
@@ -188,7 +188,8 @@ E		   :
                 TIPO_SIMBOLO var = tabelaSimbolos[$1.label];
                 $$.tipo = var.tipo;
             }
-			;
+			| TK_NUM ';' { yyerror("Número não pode ser utilizado sozinho."); }
+    		;
 TK_TIPO     : TK_TIPO_FLOAT 
             {
             	$$.tipo = "float";

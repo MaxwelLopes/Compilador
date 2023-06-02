@@ -1,5 +1,5 @@
 int main()
 {
-	int a;
-	a = 5 + 5;
+	bool x;
+	x = 1.0 > 1;
 }
