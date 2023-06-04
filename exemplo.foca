@@ -1,5 +1,4 @@
-int main()
-{
-	int a;
-	a = 1.0 + 2;
+int main(){
+	float a;
+	a = (float)1 + 1.0 ;
 }

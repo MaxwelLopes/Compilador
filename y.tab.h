@@ -59,7 +59,13 @@ extern int yydebug;
     TK_TIPO_FLOAT = 265,
     TK_TIPO_BOOL = 266,
     TK_FIM = 267,
-    TK_ERROR = 268
+    TK_ERROR = 268,
+    EQ = 269,
+    NE = 270,
+    GE = 271,
+    LE = 272,
+    AND = 273,
+    OR = 274
   };
 #endif
 /* Tokens.  */
@@ -74,6 +80,12 @@ extern int yydebug;
 #define TK_TIPO_BOOL 266
 #define TK_FIM 267
 #define TK_ERROR 268
+#define EQ 269
+#define NE 270
+#define GE 271
+#define LE 272
+#define AND 273
+#define OR 274
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED

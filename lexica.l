@@ -31,6 +31,14 @@ ID {LETRA}({LETRA}|{NUM})*
 
 [+\-*/=]		{ return *yytext; }
 
+[<>]		    { return *yytext; }
+"=="    { return EQ; }
+"!="    { return NE; }
+">="    { return GE; }
+"<="    { return LE; }
+"&&"    { return AND; }
+"||"    { return OR; }
+
 "True"      { yylval.label = yytext; return TK_TRUE; }
 "False"     { yylval.label = yytext; return TK_FALSE; }
 {NUM}		{ yylval.label = yytext; return TK_NUM; }

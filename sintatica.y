@@ -37,7 +37,7 @@ int yylex(void);
 void yyerror(string);
 %}
 
-%token TK_NUM TK_REAL TK_TRUE TK_FALSE
+%token TK_NUM TK_REAL TK_TRUE TK_FALSE 
 %token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL 
 %token TK_FIM TK_ERROR
 
@@ -45,6 +45,8 @@ void yyerror(string);
 
 %left '+' '-'
 %left '*' '/'
+%left '>' '<' EQ NE GE LE
+%left AND OR
 
 %%
 
@@ -126,6 +128,34 @@ COMANDO     : E ';'
 E		   : E '>' E
             {	
 				operacao($$,$1,$2,$3, ">");
+            }
+			| E '<' E
+            {	
+				operacao($$,$1,$2,$3, "<");
+            }
+			| E EQ E
+            {	
+				operacao($$,$1,$2,$3, "==");
+            }
+			| E NE E
+            {	
+				operacao($$,$1,$2,$3, "!=");
+            }
+			| E GE E
+            {	
+				operacao($$,$1,$2,$3, ">=");
+            }
+			| E LE E
+            {	
+				operacao($$,$1,$2,$3, "<=");
+            }
+			| E AND E
+            {	
+				operacao($$,$1,$2,$3, "&&");
+            }
+			| E OR E
+            {	
+				operacao($$,$1,$2,$3, "||");
             }
 			| E '+' E
             {	
