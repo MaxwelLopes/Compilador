@@ -49,7 +49,9 @@ void yyerror(string);
 %left '+' '-'
 %left '*' '/'
 
-%nonassoc TK_CAST_FLOAT TK_CAST_INT TK_CAST_CHAR
+%nonassoc TK_CAST_FLOAT 
+%nonassoc TK_CAST_INT 
+%nonassoc TK_CAST_CHAR
 
 %%
 
@@ -396,7 +398,7 @@ void naoDeclarado(string chave){
 }
 
 void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string operador){
-    string tipo = "int ";
+    string tipo = "int";
     if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end())){
         if (tabelaSimbolos[$1.label].atribuido == 0){
             yyerror("ERRO: Variável sem valor atribuido!");
@@ -451,7 +453,7 @@ void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string
                 $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
                 $$.traducao += "\t" + $$.label + " = " + $1.label + " " + operador + " " + aux + ";\n";
             }
-            else if($1.tipo != $3.tipo){
+            else{
                 $$.label = genTemp();
                 $$.tipo = "bool";
                 $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";

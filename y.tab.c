@@ -583,10 +583,10 @@ static const yytype_int8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,    56,    56,    62,    69,    75,    80,    84,   100,   116,
-     132,   150,   154,   158,   162,   166,   170,   174,   178,   182,
-     201,   205,   209,   213,   217,   273,   280,   287,   294,   303,
-     312,   331,   350,   369
+       0,    58,    58,    64,    71,    77,    82,    86,   102,   118,
+     134,   152,   156,   160,   164,   168,   172,   176,   180,   184,
+     203,   207,   211,   215,   219,   275,   282,   289,   296,   305,
+     314,   333,   352,   371
 };
 #endif
 
@@ -1423,7 +1423,7 @@ yyreduce:
   switch (yyn)
     {
   case 2:
-#line 57 "sintatica.y"
+#line 59 "sintatica.y"
             {
                 cout << "/*Compilador CAPY*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << yyvsp[0].declaracao << yyvsp[0].traducao << "\treturn 0;\n}" << endl;
             }
@@ -1431,7 +1431,7 @@ yyreduce:
     break;
 
   case 3:
-#line 63 "sintatica.y"
+#line 65 "sintatica.y"
             {
                 yyval.traducao = yyvsp[-1].traducao;
 				yyval.declaracao = yyvsp[-1].declaracao;
@@ -1440,7 +1440,7 @@ yyreduce:
     break;
 
   case 4:
-#line 70 "sintatica.y"
+#line 72 "sintatica.y"
             {
                 yyval.traducao = yyvsp[-1].traducao + yyvsp[0].traducao;
 				yyval.declaracao = yyvsp[-1].declaracao + yyvsp[0].declaracao;
@@ -1449,7 +1449,7 @@ yyreduce:
     break;
 
   case 5:
-#line 75 "sintatica.y"
+#line 77 "sintatica.y"
             {
                 yyval.traducao = "";
             }
@@ -1457,7 +1457,7 @@ yyreduce:
     break;
 
   case 6:
-#line 81 "sintatica.y"
+#line 83 "sintatica.y"
             {
                 yyval.traducao = yyvsp[-1].traducao;
             }
@@ -1465,7 +1465,7 @@ yyreduce:
     break;
 
   case 7:
-#line 85 "sintatica.y"
+#line 87 "sintatica.y"
             {
                 declarado(yyvsp[-1].label);
                 TIPO_SIMBOLO var;
@@ -1485,7 +1485,7 @@ yyreduce:
     break;
 
   case 8:
-#line 101 "sintatica.y"
+#line 103 "sintatica.y"
             {
                 declarado(yyvsp[-1].label);
                 TIPO_SIMBOLO var;
@@ -1505,7 +1505,7 @@ yyreduce:
     break;
 
   case 9:
-#line 117 "sintatica.y"
+#line 119 "sintatica.y"
             {
                 declarado(yyvsp[-1].label);
                 TIPO_SIMBOLO var;
@@ -1525,7 +1525,7 @@ yyreduce:
     break;
 
   case 10:
-#line 133 "sintatica.y"
+#line 135 "sintatica.y"
             {
                 declarado(yyvsp[-1].label);
                 TIPO_SIMBOLO var;
@@ -1545,7 +1545,7 @@ yyreduce:
     break;
 
   case 11:
-#line 151 "sintatica.y"
+#line 153 "sintatica.y"
             {	
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], ">");
             }
@@ -1553,7 +1553,7 @@ yyreduce:
     break;
 
   case 12:
-#line 155 "sintatica.y"
+#line 157 "sintatica.y"
             {	
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "<");
             }
@@ -1561,7 +1561,7 @@ yyreduce:
     break;
 
   case 13:
-#line 159 "sintatica.y"
+#line 161 "sintatica.y"
             {	
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "==");
             }
@@ -1569,7 +1569,7 @@ yyreduce:
     break;
 
   case 14:
-#line 163 "sintatica.y"
+#line 165 "sintatica.y"
             {	
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "!=");
             }
@@ -1577,7 +1577,7 @@ yyreduce:
     break;
 
   case 15:
-#line 167 "sintatica.y"
+#line 169 "sintatica.y"
             {	
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], ">=");
             }
@@ -1585,7 +1585,7 @@ yyreduce:
     break;
 
   case 16:
-#line 171 "sintatica.y"
+#line 173 "sintatica.y"
             {	
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "<=");
             }
@@ -1593,7 +1593,7 @@ yyreduce:
     break;
 
   case 17:
-#line 175 "sintatica.y"
+#line 177 "sintatica.y"
             {	
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "&&");
             }
@@ -1601,7 +1601,7 @@ yyreduce:
     break;
 
   case 18:
-#line 179 "sintatica.y"
+#line 181 "sintatica.y"
             {	
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "||");
             }
@@ -1609,7 +1609,7 @@ yyreduce:
     break;
 
   case 19:
-#line 183 "sintatica.y"
+#line 185 "sintatica.y"
             {	
                 //VAR
                 if(yyvsp[0].tipo == "int" || yyvsp[0].tipo == "float"){
@@ -1632,7 +1632,7 @@ yyreduce:
     break;
 
   case 20:
-#line 202 "sintatica.y"
+#line 204 "sintatica.y"
             {	
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "+");
             }
@@ -1640,7 +1640,7 @@ yyreduce:
     break;
 
   case 21:
-#line 206 "sintatica.y"
+#line 208 "sintatica.y"
             {
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "-");
             }
@@ -1648,7 +1648,7 @@ yyreduce:
     break;
 
   case 22:
-#line 210 "sintatica.y"
+#line 212 "sintatica.y"
             {
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "*");
             }
@@ -1656,7 +1656,7 @@ yyreduce:
     break;
 
   case 23:
-#line 214 "sintatica.y"
+#line 216 "sintatica.y"
             {
 				operacao(yyval,yyvsp[-2],yyvsp[-1],yyvsp[0], "/");
             }
@@ -1664,7 +1664,7 @@ yyreduce:
     break;
 
   case 24:
-#line 218 "sintatica.y"
+#line 220 "sintatica.y"
             {   
                 naoDeclarado(yyvsp[-2].label);
                 //E -> VAR
@@ -1724,7 +1724,7 @@ yyreduce:
     break;
 
   case 25:
-#line 274 "sintatica.y"
+#line 276 "sintatica.y"
             {
 				yyval.tipo = "int";
 				yyval.label = genTemp();
@@ -1735,7 +1735,7 @@ yyreduce:
     break;
 
   case 26:
-#line 281 "sintatica.y"
+#line 283 "sintatica.y"
             {
                 yyval.tipo = "float";
                 yyval.label = genTemp();
@@ -1746,7 +1746,7 @@ yyreduce:
     break;
 
   case 27:
-#line 288 "sintatica.y"
+#line 290 "sintatica.y"
             {
                 yyval.tipo = "char";
                 yyval.label = genTemp();
@@ -1757,7 +1757,7 @@ yyreduce:
     break;
 
   case 28:
-#line 295 "sintatica.y"
+#line 297 "sintatica.y"
             {
                 string valor = " 0";
                 string tipo = "int ";
@@ -1770,7 +1770,7 @@ yyreduce:
     break;
 
   case 29:
-#line 304 "sintatica.y"
+#line 306 "sintatica.y"
             {
                 string valor = " 1";
                 string tipo = "int ";
@@ -1783,7 +1783,7 @@ yyreduce:
     break;
 
   case 30:
-#line 313 "sintatica.y"
+#line 315 "sintatica.y"
             {   
                 yyval.tipo = "float";
                 yyval.label = genTemp();
@@ -1806,7 +1806,7 @@ yyreduce:
     break;
 
   case 31:
-#line 332 "sintatica.y"
+#line 334 "sintatica.y"
             {   
                 yyval.tipo = "int";
                 yyval.label = genTemp();
@@ -1829,7 +1829,7 @@ yyreduce:
     break;
 
   case 32:
-#line 351 "sintatica.y"
+#line 353 "sintatica.y"
             {   
                 yyval.tipo = "char";
                 yyval.label = genTemp();
@@ -1852,7 +1852,7 @@ yyreduce:
     break;
 
   case 33:
-#line 370 "sintatica.y"
+#line 372 "sintatica.y"
             {
                 naoDeclarado(yyvsp[0].label);
                 TIPO_SIMBOLO var = tabelaSimbolos[yyvsp[0].label];
@@ -2094,7 +2094,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 376 "sintatica.y"
+#line 378 "sintatica.y"
 
 
 #include "lex.yy.c"
@@ -2118,7 +2118,7 @@ void naoDeclarado(string chave){
 }
 
 void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string operador){
-    string tipo = "int ";
+    string tipo = "int";
     if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end())){
         if (tabelaSimbolos[$1.label].atribuido == 0){
             yyerror("ERRO: Variável sem valor atribuido!");
@@ -2173,7 +2173,7 @@ void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string
                 $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
                 $$.traducao += "\t" + $$.label + " = " + $1.label + " " + operador + " " + aux + ";\n";
             }
-            else if($1.tipo != $3.tipo){
+            else{
                 $$.label = genTemp();
                 $$.tipo = "bool";
                 $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";
