@@ -46,7 +46,7 @@ void yyerror(string);
 
 %left AND OR NO
 %left '>' '<' EQ NE GE LE
-%left '+' '-'
+%left '+' '-' 
 %left '*' '/'
 
 %nonassoc TK_CAST_FLOAT 
@@ -79,7 +79,7 @@ COMANDOS    : COMANDO COMANDOS
             }
             ;
 
-COMANDO     : E ';'
+COMANDO     : G ';'
             {
                 $$.traducao = $1.traducao;
             }
@@ -149,7 +149,73 @@ COMANDO     : E ';'
             }
             ;
 
-E		   : E '>' E
+G : E_R 
+    {
+        
+    }
+    ;
+E_R : E_R  '<' E
+    {
+       operacao($$,$1,$2,$3, ">");  
+    }
+    | E_R  '>' E
+    {
+
+    }
+    | E
+    {
+
+    }
+    ;
+
+E :
+     E '+' T
+    {
+        operacao($$,$1,$2,$3, "+");
+    }
+    | E '-' T
+    {
+        operacao($$,$1,$2,$3, "-");
+    }
+    | T
+    {
+        
+    }
+    ;
+T : T '*' F
+    {
+        operacao($$,$1,$2,$3, "*");
+    }
+    | T '/' F
+    {
+        operacao($$,$1,$2,$3, "/");
+    }
+    | F
+    {
+        
+    }
+    ;
+F:  TK_NUM
+    {
+        $$.tipo = "int";
+		$$.label = genTemp();
+		$$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
+		$$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
+    }
+    | TK_ID
+    {
+        naoDeclarado($1.label);
+        TIPO_SIMBOLO var = tabelaSimbolos[$1.label];
+        $$.tipo = var.tipo;
+    }
+    | '(' E ')'
+    {
+        
+    }
+    ; 
+%%           
+
+/*E		   : E '>' E
             {	
 				operacao($$,$1,$2,$3, ">");
             }
@@ -375,7 +441,7 @@ E		   : E '>' E
                 $$.tipo = var.tipo;
             }
     		;
-%%
+%%*/
 
 #include "lex.yy.c"
 
