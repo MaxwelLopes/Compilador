@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <vector>
 
 #define YYSTYPE atributos
 
@@ -18,7 +19,13 @@ struct atributos
 
 void naoDeclarado(string chave);
 void declarado(string chave);
+void empilha();
+void desempilha();
 string genTemp();
+int busca_escopo(string var);
+int verificaVar(string var);
+int verificaVarBloco(string var);
+void conversaoImplicitaOp(atributos& $$, atributos& $1, atributos& $3, string operador, string tipo);
 void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string operador);
 
 // Struct de cada tipo
@@ -28,19 +35,21 @@ typedef struct
     string tipo;
 	string temp;
     int atribuido;
+    int bloco;
 } TIPO_SIMBOLO;
 
-// Criando tabela de símbolos usando Hash (key: 'string', valor: 'struct')
-unordered_map<string, TIPO_SIMBOLO> tabelaSimbolos;
+int bloco_atual = -1;
+vector<unordered_map<string, TIPO_SIMBOLO>> pilha; 
 int temp;
 
 int yylex(void);
 void yyerror(string);
 %}
 
-%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR
-%token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_CAST_FLOAT TK_CAST_INT TK_CAST_BOOL TK_TIPO_CHAR
+%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR TK_STRING TK_IF
+%token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_CAST_FLOAT TK_CAST_INT TK_CAST_BOOL TK_TIPO_CHAR TK_TIPO_STRING
 %token TK_FIM TK_ERROR 
+
 
 %start S
 
@@ -59,12 +68,28 @@ S           : TK_TIPO_INT TK_MAIN '(' ')' BLOCO
             {
                 cout << "/*Compilador CAPY*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.declaracao << $5.traducao << "\treturn 0;\n}" << endl;
             }
+            |
             ;
 
-BLOCO       : '{' COMANDOS '}'
+BLOCO       : '{' INI COMANDOS FIM '}'
             {
-                $$.traducao = $2.traducao;
-				$$.declaracao = $2.declaracao;
+                
+                $$.traducao = $3.traducao;
+				$$.declaracao = $3.declaracao;
+            }
+            ;
+
+INI         :
+            {
+                empilha();
+                bloco_atual++;
+            }
+            ;
+
+FIM         :
+            {
+                desempilha();
+                bloco_atual--;
             }
             ;
 
@@ -76,12 +101,15 @@ COMANDOS    : COMANDO COMANDOS
             |
             {
                 $$.traducao = "";
+                $$.declaracao = "";
             }
             ;
 
-COMANDO     : E ';'
+COMANDO     : BLOCO
+            | E ';'
             {
                 $$.traducao = $1.traducao;
+                $$.declaracao = $1.declaracao;
             }
             | TK_TIPO_INT TK_ID ';'
             {
@@ -90,30 +118,116 @@ COMANDO     : E ';'
                 var.nome = $2.label;
                 var.tipo = "int";
                 var.atribuido = 0;
-				
 				var.temp = genTemp();
-
-                tabelaSimbolos[var.nome] = var;
-
+                var.bloco = bloco_atual;
+                pilha[bloco_atual][var.nome] = var;
                 $$.tipo = var.tipo;
-                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + "\n";
+                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
                 $$.traducao = "";
             }
-            | TK_TIPO_FLOAT TK_ID ';'
+            | TK_TIPO_INT TK_ID '=' E';'
+            {
+                declarado($2.label);
+                TIPO_SIMBOLO var;
+                var.nome = $2.label;
+                var.tipo = "int";
+                var.atribuido = 0;
+				var.temp = genTemp();
+                var.bloco = bloco_atual;
+                pilha[bloco_atual][var.nome] = var;
+                $$.tipo = var.tipo;
+                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
+                $$.traducao = "";
+
+                //E -> VAR  
+                if(verificaVar($4.label)){
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "bool" && pilha[busca_escopo($4.label)][$4.label].tipo != "bool"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo != "bool" && pilha[busca_escopo($4.label)][$4.label].tipo == "bool"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "char" && pilha[busca_escopo($4.label)][$4.label].tipo != "char"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo != "char" && pilha[busca_escopo($4.label)][$4.label].tipo == "char"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    
+                    pilha[busca_escopo($2.label)][$2.label].atribuido = 1;
+
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "float" && pilha[busca_escopo($4.label)][$4.label].tipo == "int"){
+                        $$.label = genTemp();
+                        $$.declaracao += $2.declaracao + $2.declaracao + "\t" + "float" + " " + $$.label + ";\n";
+                        $$.traducao += $2.traducao + $4.traducao + "\t" + $$.label + " = " + "(" + "float" + ")" + pilha[busca_escopo($4.label)][$4.label].temp + ";\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $$.label + ";\n";
+				    }
+                    else if(pilha[busca_escopo($2.label)][$2.label].tipo == "int" && $4.tipo == "float"){
+                        $$.label = genTemp();
+                        $$.declaracao += $2.declaracao + $4.declaracao + "\t" + "int" + " " + $$.label + ";\n";
+                        $$.traducao += $2.traducao + $4.traducao + "\t" + $$.label + " = " + "(" + "int" + ")" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $$.label + ";\n";
+                    }
+				    //IGUAIS
+                    else{
+                        pilha[busca_escopo($2.label)][$2.label].atribuido = 1;
+                        $$.declaracao += $2.declaracao + $4.declaracao;
+                        $$.traducao += $2.traducao + $4.traducao + "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + pilha[busca_escopo($4.label)][$4.label].temp + ";\n";
+                    }
+                }
+                else{
+                    //E -> NUM
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "bool" && $4.tipo != "bool"){
+                        yyerror("ERRO: Tipos difentes!");
+                    } 
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo != "bool" && $4.tipo == "bool"){
+                        yyerror("ERRO: Tipos difentes!");
+                    } 
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "char" && $4.tipo != "char"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo != "char" && $4.tipo == "char"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    
+                    pilha[busca_escopo($2.label)][$2.label].atribuido = 1;
+                    
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "float" && $3.tipo == "int"){
+                        $3.tipo = "float";
+                        $$.label = genTemp();
+                        $$.declaracao += $2.declaracao + $4.declaracao + "\t" + $4.tipo + " " + $$.label + ";\n";
+                        $$.traducao += $2.traducao + $4.traducao + "\t" + $$.label + " = " + "(" + $4.tipo + ")" + $4.label + ";\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $$.label + ";\n";
+                    }
+                    else if(pilha[busca_escopo($2.label)][$2.label].tipo == "int" && $4.tipo == "float"){
+                        $3.tipo = "int";
+                        $$.label = genTemp();
+                        $$.declaracao += $2.declaracao + $4.declaracao + "\t" + $4.tipo + " " + $$.label + ";\n";
+                        $$.traducao += $2.traducao + $4.traducao + "\t" + $$.label + " = " + "(" + $4.tipo + ")" + $4.label + ";\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $$.label + ";\n";
+                    }
+                    //IGUAIS -string
+                    else{
+                        $$.declaracao += $2.declaracao + $4.declaracao;
+                        $$.traducao += $2.traducao + $4.traducao + "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $4.label + ";\n";
+                    }
+                }
+            }
+
+            | TK_TIPO_FLOAT TK_ID';'
             {
                 declarado($2.label);
                 TIPO_SIMBOLO var;
                 var.nome = $2.label;
                 var.tipo = "float";
                 var.atribuido = 0;
-				
 				var.temp = genTemp();
-
-                tabelaSimbolos[var.nome] = var;
-
+                var.bloco = bloco_atual;
+                pilha[bloco_atual][var.nome] = var;
                 $$.tipo = var.tipo;
-                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + "\n";
+                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
                 $$.traducao = "";
+                
             }
             | TK_TIPO_CHAR TK_ID ';'
             {
@@ -122,13 +236,11 @@ COMANDO     : E ';'
                 var.nome = $2.label;
                 var.tipo = "char";
                 var.atribuido = 0;
-				
 				var.temp = genTemp();
-
-                tabelaSimbolos[var.nome] = var;
-
+                var.bloco = bloco_atual;
+                pilha[bloco_atual][var.nome] = var;
                 $$.tipo = var.tipo;
-                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + "\n";
+                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
                 $$.traducao = "";
             }
 			| TK_TIPO_BOOL TK_ID ';'
@@ -138,13 +250,25 @@ COMANDO     : E ';'
                 var.nome = $2.label;
                 var.tipo = "bool";
                 var.atribuido = 0;
-				
 				var.temp = genTemp();
-
-                tabelaSimbolos[var.nome] = var;
-
-                $$.tipo = "int";
-                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + "\n";
+                var.bloco = bloco_atual;
+                pilha[bloco_atual][var.nome] = var;
+                $$.tipo = var.tipo;
+                $$.declaracao = "\t" + string("int") + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
+                $$.traducao = "";
+            } 
+            | TK_TIPO_STRING TK_ID ';'
+            {
+                declarado($2.label);
+                TIPO_SIMBOLO var;
+                var.nome = $2.label;
+                var.tipo = "string";
+                var.atribuido = 0;
+				var.temp = genTemp();
+                var.bloco = bloco_atual;
+                pilha[bloco_atual][var.nome] = var;
+                $$.tipo = var.tipo;
+                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
                 $$.traducao = "";
             }
             ;
@@ -183,20 +307,20 @@ E		   : E '>' E
             }
             | NO E
             {	
-                //VAR
-                if($2.tipo == "int" || $2.tipo == "float"){
+                if($2.tipo != "bool"){
                     yyerror("ERRO: Operadores Lógicos só aceitam tipos Booleanos!");
                 }
-                if(!(tabelaSimbolos.find($2.label) == tabelaSimbolos.end())){
+                //VAR
+                if(verificaVar($2.label)){
                     $$.label = genTemp();
                     $$.tipo = "bool";
-                    $$.declaracao += $1.declaracao + $2.declaracao + "\t" + $2.tipo + " " + $$.label + ";\n";
-                    $$.traducao += $1.traducao + $2.traducao + "\t" + $$.label + " = " + "!" + tabelaSimbolos[$2.label].temp + ";\n";
+                    $$.declaracao += $1.declaracao + $2.declaracao + "\t" + "int" + " " + $$.label + ";\n";
+                    $$.traducao += $1.traducao + $2.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($2.label)][$2.label].temp + ";\n";
                 }else{
                     //NAO VAR
                     $$.label = genTemp();
                     $$.tipo = "bool";
-                    $$.declaracao += $1.declaracao + $2.declaracao + "\t" + $2.tipo + " " + $$.label + ";\n";
+                    $$.declaracao += $1.declaracao + $2.declaracao + "\t" + "int" + " " + $$.label + ";\n";
                     $$.traducao += $1.traducao + $2.traducao + "\t" + $$.label + " = " + "!" + $2.label + ";\n";
                 }
             }
@@ -218,59 +342,85 @@ E		   : E '>' E
             }
             | TK_ID '=' E
             {   
-                naoDeclarado($1.label);
-                //E -> VAR
-                tabelaSimbolos[$1.label].atribuido = 1;
-                if(!(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-                    if(tabelaSimbolos[$1.label].tipo == "bool" && tabelaSimbolos[$3.label].tipo != "bool"){
+                //E -> VAR  
+                if(verificaVar($3.label)){
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "bool" && pilha[busca_escopo($3.label)][$3.label].tipo != "bool"){
                         yyerror("ERRO: Tipos difentes!");
                     }
-                    if(tabelaSimbolos[$1.label].tipo != "bool" && tabelaSimbolos[$3.label].tipo == "bool"){
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo != "bool" && pilha[busca_escopo($3.label)][$3.label].tipo == "bool"){
                         yyerror("ERRO: Tipos difentes!");
                     }
-                    if(tabelaSimbolos[$1.label].tipo == "char" && tabelaSimbolos[$3.label].tipo != "char"){
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "char" && pilha[busca_escopo($3.label)][$3.label].tipo != "char"){
                         yyerror("ERRO: Tipos difentes!");
                     }
-                    if(tabelaSimbolos[$1.label].tipo != "char" && tabelaSimbolos[$3.label].tipo == "char"){
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo != "char" && pilha[busca_escopo($3.label)][$3.label].tipo == "char"){
                         yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
+                       //yyerror("ERRO linha " + contn + " : Variável " + $3.label + " sem valor atribuido");
+                    }
+                    
+                    pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
+
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "float" && pilha[busca_escopo($3.label)][$3.label].tipo == "int"){
+                        $$.label = genTemp();
+                        $$.declaracao += $1.declaracao + $3.declaracao + "\t" + "float" + " " + $$.label + ";\n";
+                        $$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + "float" + ")" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $$.label + ";\n";
+				    }
+                    else if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" && $3.tipo == "float"){
+                        $$.label = genTemp();
+                        $$.declaracao += $1.declaracao + $3.declaracao + "\t" + "int" + " " + $$.label + ";\n";
+                        $$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + "int" + ")" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $$.label + ";\n";
+                    }
+				    //IGUAIS
+                    else{
+                        pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
+                        $$.declaracao += $1.declaracao + $3.declaracao;
+                        $$.traducao += $1.traducao + $3.traducao + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
                     }
                 }
                 else{
-                //E -> NUM
-                if(tabelaSimbolos[$1.label].tipo == "bool" && $3.tipo != "bool"){
-					yyerror("ERRO: Tipos difentes!");
-				} 
-				if(tabelaSimbolos[$1.label].tipo != "bool" && $3.tipo == "bool"){
-					yyerror("ERRO: Tipos difentes!");
-				}
-                if(tabelaSimbolos[$1.label].tipo == "char" && $3.tipo != "char"){
-					yyerror("ERRO: Tipos difentes!");
-				}
-				if(tabelaSimbolos[$1.label].tipo != "char" && $3.tipo == "char"){
-					yyerror("ERRO: Tipos difentes!");
-				}
+                    //E -> NUM
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "bool" && $3.tipo != "bool"){
+                        yyerror("ERRO: Tipos difentes!");
+                    } 
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo != "bool" && $3.tipo == "bool"){
+                        yyerror("ERRO: Tipos difentes!");
+                    } 
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "char" && $3.tipo != "char"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo != "char" && $3.tipo == "char"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(1){
+                        pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
+                    }
+                    
+                    
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "float" && $3.tipo == "int"){
+                        $3.tipo = "float";
+                        $$.label = genTemp();
+                        $$.declaracao += $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
+                        $$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + $3.tipo + ")" + $3.label + ";\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $$.label + ";\n";
+                    }
+                    else if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" && $3.tipo == "float"){
+                        $3.tipo = "int";
+                        $$.label = genTemp();
+                        $$.declaracao += $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
+                        $$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + $3.tipo + ")" + $3.label + ";\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $$.label + ";\n";
+                    }
+                    //IGUAIS -string
+                    else{
+                        pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
+                        $$.declaracao += $1.declaracao + $3.declaracao;
+                        $$.traducao += $1.traducao + $3.traducao + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $3.label + ";\n";
+                    }
                 }
-
-				if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
-					$3.tipo = "float";
-					$$.label = genTemp();
-					$$.declaracao += $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
-					$$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + $3.tipo + ")" + $3.label + ";\n";
-					$$.traducao += "\t" + tabelaSimbolos[$1.label].temp + " = " + $$.label + ";\n";
-				}
-				else if(tabelaSimbolos[$1.label].tipo == "int" && $3.tipo == "float"){
-					$3.tipo = "int";
-					$$.label = genTemp();
-					$$.declaracao += $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
-					$$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + $3.tipo + ")" + $3.label + ";\n";
-					$$.traducao += "\t" + tabelaSimbolos[$1.label].temp + " = " + $$.label + ";\n";
-				}
-				//IGUAIS
-				else{
-					$$.declaracao = $1.declaracao + $3.declaracao;
-					$$.traducao = $1.traducao + $3.traducao + "\t" + tabelaSimbolos[$1.label].temp + " = " + $3.label + ";\n";
-				}
-                
             }
             | TK_NUM
             {
@@ -278,6 +428,8 @@ E		   : E '>' E
 				$$.label = genTemp();
 				$$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
 				$$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
+
+                //$$.label = $1.label;
             }
             | TK_REAL 
             {
@@ -285,6 +437,7 @@ E		   : E '>' E
                 $$.label = genTemp();
                 $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
                 $$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
+                //$$.label = $1.label;
             }
             | TK_CHAR 
             {
@@ -292,24 +445,37 @@ E		   : E '>' E
                 $$.label = genTemp();
                 $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
                 $$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
+                //$$.label = $1.label;
+            }
+            | TK_STRING
+            {
+                $$.tipo = "string";
+                $$.label = genTemp();
+                $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
+                $$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
+                //$$.label = $1.label;
+
+                
             }
 			| TK_FALSE
             {
-                string valor = " 0";
-                string tipo = "int ";
+                string valor = "0";
+                string tipo = "int";
                 $$.tipo = "bool";
                 $$.label = genTemp();
                 $$.declaracao += "\t" + tipo + " " + $$.label + ";\n";
                 $$.traducao += "\t" + $$.label + " = " + valor + ";\n";
+                //$$.label = valor;
             }
 			| TK_TRUE
             {
-                string valor = " 1";
-                string tipo = "int ";
+                string valor = "1";
+                string tipo = "int";
                 $$.tipo = "bool";
                 $$.label = genTemp();
                 $$.declaracao += "\t" + tipo + " " + $$.label + ";\n";
                 $$.traducao += "\t" + $$.label + " = " + valor + ";\n";
+                //$$.label = valor;
             }
 			| TK_CAST_FLOAT E
             {   
@@ -319,15 +485,13 @@ E		   : E '>' E
                 $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
 
                 //CAST VAR
-                if(!(tabelaSimbolos.find($2.label) == tabelaSimbolos.end()))
-                {
-                    $$.traducao += "\t" + $$.label + " = "  + "(float)"  + tabelaSimbolos[$2.label].temp + ";\n";
+                if(verificaVar($2.label)){
+                    $$.traducao += "\t" + $$.label + " = "  + "(float)"  + pilha[bloco_atual][$2.label].temp + ";\n";
                 }
                 //CAST NUM
-                else if(tabelaSimbolos.find($2.label) == tabelaSimbolos.end())
-                {
+                else if(!verificaVar($2.label)){
                     $$.declaracao += $1.declaracao + $2.declaracao;
-                $$.traducao += $1.traducao + $2.traducao + "\t" + $$.label + " = "  + "(float)"  + $2.label + ";\n";
+                    $$.traducao += $1.traducao + $2.traducao + "\t" + $$.label + " = "  + "(float)"  + $2.label + ";\n";
                 }
             }
             | TK_CAST_INT E
@@ -338,15 +502,13 @@ E		   : E '>' E
                 $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
 
                 //CAST VAR
-                if(!(tabelaSimbolos.find($2.label) == tabelaSimbolos.end()))
-                {
-                    $$.traducao += "\t" + $$.label + " = "  + "(int)"  + tabelaSimbolos[$2.label].temp + ";\n";
+                if(verificaVar($2.label)){
+                    $$.traducao += "\t" + $$.label + " = "  + "(int)"  + pilha[bloco_atual][$2.label].temp + ";\n";
                 }
                 //CAST NUM
-                else if(tabelaSimbolos.find($2.label) == tabelaSimbolos.end())
-                {
+                else if(!verificaVar($2.label)){
                     $$.declaracao += $1.declaracao + $2.declaracao;
-                $$.traducao += $1.traducao + $2.traducao + "\t" + $$.label + " = "  + "(int)"  + $2.label + ";\n";
+                    $$.traducao += $1.traducao + $2.traducao + "\t" + $$.label + " = "  + "(int)"  + $2.label + ";\n";
                 }
             }
             | TK_CAST_CHAR E
@@ -357,13 +519,11 @@ E		   : E '>' E
                 $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
 
                 //CAST VAR
-                if(!(tabelaSimbolos.find($2.label) == tabelaSimbolos.end()))
-                {
-                    $$.traducao += "\t" + $$.label + " = "  + "(char)"  + tabelaSimbolos[$2.label].temp + ";\n";
+                if(verificaVar($2.label)){
+                    $$.traducao += "\t" + $$.label + " = "  + "(char)"  + pilha[bloco_atual][$2.label].temp + ";\n";
                 }
                 //CAST NUM
-                else if(tabelaSimbolos.find($2.label) == tabelaSimbolos.end())
-                {
+                else if(!verificaVar($2.label)){
                     $$.declaracao += $1.declaracao + $2.declaracao;
                     $$.traducao += $1.traducao + $2.traducao + "\t" + $$.label + " = "  + "(char)"  + $2.label + ";\n";
                 }
@@ -371,8 +531,8 @@ E		   : E '>' E
             | TK_ID
             {
                 naoDeclarado($1.label);
-                TIPO_SIMBOLO var = tabelaSimbolos[$1.label];
-                $$.tipo = var.tipo;
+                //TIPO_SIMBOLO var = pilha[bloco_atual][$1.label];
+                //$$.tipo = var.tipo;
             }
     		;
 %%
@@ -388,29 +548,185 @@ string genTemp()
 }
 
 void declarado(string chave){
-	if (!(tabelaSimbolos.find(chave) == tabelaSimbolos.end()))
+	if (verificaVarBloco(chave))
     	yyerror("ERRO: Variável " + chave + " já foi declarada!");
 }
 
 void naoDeclarado(string chave){
-	if (tabelaSimbolos.find(chave) == tabelaSimbolos.end())
+	if (!verificaVar(chave))
 		yyerror("ERRO: Variável " + chave + " não foi declarada!");
+}
+
+int verificaVar(string var){
+    for(int i=bloco_atual;i>=0;i--){
+        if(!(pilha[i].find(var) == pilha[i].end())){
+            return 1;
+        }
+    }  
+    return 0;
+}
+
+int verificaVarBloco(string var){
+    if(!(pilha[bloco_atual].find(var) == pilha[bloco_atual].end())){
+        return 1;
+    }
+    return 0;
+}
+
+int busca_escopo(string var){
+    for(int i= bloco_atual; i>=0; i--){
+        if(!(pilha[i].find(var) == pilha[i].end())){
+            return pilha[i][var].bloco;
+        }
+    } 
+    yyerror("ERRO: Variável " + var + " não foi declarada!");  
+    return 0;
+} 
+
+void conversaoImplicitaOp(atributos& $$, atributos& $1, atributos& $3, string operador, string tipo){
+    //NUMERO NUMERO
+    if(!verificaVar($1.label) && !verificaVar($3.label)){
+        if(($1.tipo == "int" && $3.tipo == "float") || ($1.tipo == "float" && $3.tipo == "int") ){
+            $$.label = genTemp();
+            $$.tipo = "float";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + $1.label + ";\n";
+
+            string aux = $$.label;
+            $$.label = genTemp();
+            if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                $$.tipo = "float";
+            }
+            else{
+                $$.tipo = "bool";
+            }
+            
+            $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
+            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
+        }
+        else{
+            $$.label = genTemp();
+            if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                $$.tipo = $1.tipo;
+            }
+            else{
+                $$.tipo = "bool";
+            }
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + tipo + " " + $$.label + ";\n";
+        }
+    }
+    //VAR NUMERO
+    else if(verificaVar($1.label) && !verificaVar($3.label)){
+        if((pilha[busca_escopo($1.label)][$1.label].tipo == "int" && $3.tipo == "float") || (pilha[busca_escopo($1.label)][$1.label].tipo == "float" && $3.tipo == "int") ){
+            $$.label = genTemp();
+            $$.tipo = "float";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + pilha[busca_escopo($1.label)][$1.label].temp + ";\n";
+
+            string aux = $$.label;
+            $$.label = genTemp();
+            if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                $$.tipo = "float";
+            }
+            else{
+                $$.tipo = "bool";
+            }
+            
+            $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
+            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
+        }
+        else{
+            $$.label = genTemp();
+            if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                $$.tipo = pilha[busca_escopo($1.label)][$1.label].tipo;
+            }
+            else{
+                $$.tipo = "bool";
+            }
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + pilha[busca_escopo($1.label)][$1.label].temp + " " + operador + " " + $3.label + ";\n";
+        }
+    }
+    //NUMERO VAR
+    else if(!verificaVar($1.label) && verificaVar($3.label)){
+        if(($1.tipo == "int" && pilha[busca_escopo($3.label)][$3.label].tipo == "float") || ($1.tipo == "float" && pilha[busca_escopo($3.label)][$3.label].tipo == "int") ){
+            $$.label = genTemp();
+            $$.tipo = "float";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + $1.label + ";\n";
+
+            string aux = $$.label;
+            $$.label = genTemp();
+            if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                $$.tipo = "float";
+            }
+            else{
+                $$.tipo = "bool";
+            }
+            
+            $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
+            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+        }
+        else{
+            $$.label = genTemp();
+            if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                $$.tipo = $1.tipo;
+            }
+            else{
+                $$.tipo = "bool";
+            }
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + tipo + " " + $$.label + ";\n";
+        }
+    }
+    //VAR VAR
+    else if(verificaVar($1.label) && verificaVar($3.label)){
+        if((pilha[busca_escopo($1.label)][$1.label].tipo == "int" && pilha[busca_escopo($3.label)][$3.label].tipo == "float") || (pilha[busca_escopo($1.label)][$1.label].tipo == "float" && pilha[busca_escopo($3.label)][$3.label].tipo == "int") ){
+            $$.label = genTemp();
+            $$.tipo = "float";
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + pilha[busca_escopo($1.label)][$1.label].temp + ";\n";
+
+            string aux = $$.label;
+            $$.label = genTemp();
+            if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                $$.tipo = "float";
+            }
+            else{
+                $$.tipo = "bool";
+            }
+            
+            $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
+            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+        }
+        else{
+            $$.label = genTemp();
+            if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                $$.tipo = pilha[busca_escopo($1.label)][$1.label].tipo;
+            }
+            else{
+                $$.tipo = "bool";
+            }
+            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + pilha[busca_escopo($1.label)][$1.label].temp + " " + operador + " " + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + tipo + " " + $$.label + ";\n";
+        }
+    }
 }
 
 void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string operador){
     string tipo = "int";
-    if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end())){
-        if (tabelaSimbolos[$1.label].atribuido == 0){
-            yyerror("ERRO: Variável sem valor atribuido!");
+    if(verificaVar($1.label)){
+        if (pilha[busca_escopo($1.label)][$1.label].atribuido == 0){
+            yyerror("ERRO: Variável " + $1.label + " sem valor atribuido!");
         }
     }
-    if(!(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-        if (tabelaSimbolos[$1.label].atribuido == 0){
-            yyerror("ERRO: Variável sem valor atribuido!");
+    if(verificaVar($3.label)){
+        if (pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
+            yyerror("ERRO: Variável " + $3.label + " sem valor atribuido!");
         }
     }
     if(operador == "||" || operador == "&&"){
-        if($1.tipo == "int" || $1.tipo == "float" || $3.tipo == "int" || $3.tipo == "float"){
+        if($1.tipo == "int" || $1.tipo == "float" || $1.tipo == "char" || $3.tipo == "int" || $3.tipo == "float" || $3.tipo == "char"){
             yyerror("ERRO: Operadores Lógicos só aceitam tipos Booleanos!");
         }
     }
@@ -424,471 +740,26 @@ void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string
             yyerror("Erro: operações aritiméticas não aceitam booleanos!");
         }
     }
-    if(operador == ">" || operador == "<" || operador == ">=" || operador == "<=" || operador == "==" || operador == "!="){
-        //NUMERO NUMERO
-        if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-            if($1.tipo == "int" && $3.tipo == "float"){
-                $1.tipo = "float";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $1.label + ";\n";
 
-                string aux = $$.label;
-                $$.label = genTemp();
-                $$.tipo = "bool";
-
-                $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
-            }
-            else if($1.tipo == "float" && $3.tipo == "int"){
-                $3.tipo = "float";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-
-                string aux = $$.label;
-                $$.label = genTemp();
-                $$.tipo = "bool";
-
-                $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
-                $$.traducao += "\t" + $$.label + " = " + $1.label + " " + operador + " " + aux + ";\n";
-            }
-            else{
-                $$.label = genTemp();
-                $$.tipo = "bool";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao +"\t" + tipo + " " + $$.label + ";\n";
-            }
-        }
-        //VAR NUMERO
-        else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end()) && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-            if(tabelaSimbolos[$1.label].tipo == "int" && $3.tipo == "float"){
-                tabelaSimbolos[$1.label].tipo = "float";
-                $$.label = genTemp();
-                $$.tipo = "float";
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-
-                string aux = $$.label;
-                $$.label = genTemp();
-                $$.tipo = "bool";
-
-                $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
-            }
-            else if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
-                $3.tipo = "float";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$1.label].tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-
-                string aux = $$.label;
-                $$.label = genTemp();
-                $$.tipo = "bool";
-
-                $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
-                $$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + aux + ";\n";
-            }
-            else{
-                $$.label = genTemp();
-                $$.tipo = "bool";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + $3.label + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao +"\t" + tabelaSimbolos[$1.label].tipo + " " + $$.label + ";\n";
-            }
-        }
-        //NUMERO VAR
-        else if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && !(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-            if($1.tipo == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-                $1.tipo = "float";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo + ")" + $1.label + ";\n";
-
-                string aux = $$.label;
-                $$.label = genTemp();
-                $$.tipo = "bool";
-
-                $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-            }
-            else if($1.tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-                $$.tipo = "float";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-
-                string aux = $$.label;
-                $$.label = genTemp();
-                $$.tipo = "bool";
-
-                $$.declaracao += "\t" + tipo + " " + $$.label + ";\n"; 
-                $$.traducao += "\t" + $$.label + " = " + $1.label + " " + operador + " " + aux + ";\n";
-            }
-            else{
-                $$.label = genTemp();
-                $$.tipo = "bool";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + tipo + " = " + $1.label + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-            }
-        }
-        //VAR VAR
-        else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-            if(tabelaSimbolos[$1.label].tipo == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-                $$.tipo = "float";
-                $$.label = genTemp(); 
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-
-                string aux = $$.label;
-                $$.label = genTemp();
-                $$.tipo = "bool"; 
-
-                $$.declaracao += "\t" + $$.tipo + " " + tipo + ";\n"; 
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-            }
-            else if(tabelaSimbolos[$1.label].tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-                $$.tipo = "float"; 
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-
-                string aux = $$.label;
-                $$.label = genTemp();
-                $$.tipo = "bool";
-
-                $$.declaracao += "\t" + $$.tipo + " " + tipo + ";\n"; 
-                $$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + aux + ";\n";
-            }
-            else{
-                $$.label = genTemp();
-                $$.tipo = "bool";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $$.tipo + " " + $$.label + ";\n";
-            }
-        }
+    //relacionanis e lógicos
+    if(operador == ">" || operador == "<" || operador == ">=" || operador == "<=" || operador == "==" || operador == "!=" || operador == "&&" || operador == "||"){
+        conversaoImplicitaOp($$, $1, $3, operador, "int");
     }
-    else if(operador == "&&" || operador == "||"){
-        //NUM NUM
-        if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-            $$.label = genTemp();
-            $$.tipo = "bool";
-            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + tipo + " " + $$.label + ";\n";
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";
-        }
-        //VAR VAR
-        if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-            $$.label = genTemp();
-            $$.tipo = "bool";
-            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + tipo + " " + $$.label + ";\n";
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-        }
-        //VAR NUM
-        if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end()) && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-            $$.label = genTemp();
-            $$.tipo = "bool";
-            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + tipo + " " + $$.label + ";\n";
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + $3.label + ";\n";
-        }
-        //NUM VAR
-        if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && !(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-            $$.label = genTemp();
-            $$.tipo = "bool";
-            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + tipo + " " + $$.label + ";\n";
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-        }
-    }
-    //CHAR
-    else if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-        //NUMERO NUMERO
-        if($1.tipo == "char" && ($3.tipo == "int" || $3.tipo == "float")){
-            $$.tipo = "char";
-            $$.label = genTemp();
-            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + $3.label + ";\n";
     
-            string aux = $$.label;
-
-            $$.label = genTemp();
-
-            $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
-        }
-        else if($3.tipo == "char" && ($1.tipo == "int" || $1.tipo == "float")){
-            $$.tipo = "char";
-            $$.label = genTemp();
-            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + $1.label + ";\n";
-    
-            string aux = $$.label;
-
-            $$.label = genTemp();
-
-            $$.declaracao += "\t" + $2.tipo + " " + $$.label + ";\n";
-            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
-        }
-
-        // VAR VAR
-        else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-            if(tabelaSimbolos[$1.label].tipo == "char" && (tabelaSimbolos[$3.label].tipo == "int" || tabelaSimbolos[$3.label].tipo == "float")){
-                $$.tipo = "char";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-        
-                string aux = $$.label;
-
-                $$.label = genTemp();
-
-                $$.declaracao += "\t" + tabelaSimbolos[$1.label].tipo + " " + $$.label + ";\n";
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$1.label].temp + ";\n";
-            }
-            else if(tabelaSimbolos[$3.label].tipo == "char" && (tabelaSimbolos[$1.label].tipo == "int" || tabelaSimbolos[$1.label].tipo == "float")){
-                $$.tipo = "char";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-        
-                string aux = $$.label;
-
-                $$.label = genTemp();
-
-                $$.declaracao += "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-            }
-            else{
-                $$.label = genTemp();
-                $$.tipo = "char";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $$.tipo + " " + $$.label + ";\n";
-            }
-        }
-        //VAR NUM
-        else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end()) && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-            if(tabelaSimbolos[$1.label].tipo == "char" && ($3.label == "int" || $3.tipo == "float")){
-                $$.tipo = "char";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-                string aux = $$.label;
-
-                $$.label = genTemp();
-                $$.label = "char";
-
-                $$.declaracao += "\t" + tabelaSimbolos[$1.label].tipo + " " + $$.label + ";\n";
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$1.label].temp + ";\n";
-            }
-            else if($3.tipo == "char" && (tabelaSimbolos[$1.label].tipo == "int" || tabelaSimbolos[$1.label].tipo == "float")){
-                $$.tipo = "char";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-        
-                string aux = $$.label;
-
-                $$.label = genTemp();
-
-                $$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
-            }
-            //IGUAIS
-            else {
-                $$.label = genTemp();
-                $$.tipo = tabelaSimbolos[$1.label].tipo;
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + $3.label + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-            }
-        }
-        // NUM VAR
-
-        else if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && !(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-            if($1.tipo == "char" && (tabelaSimbolos[$3.label].tipo == "int" || tabelaSimbolos[$3.label].tipo == "float")){
-                $$.tipo = "char";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + $1.label + ";\n";
-        
-                string aux = $$.label;
-
-                $$.label = genTemp();
-
-                $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $1.label + ";\n";
-            }
-            else if(tabelaSimbolos[$3.label].tipo == "char" && ($1.tipo == "int" || $1.tipo == "float")){
-                
-                $$.tipo = "char";
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + $1.label + ";\n";
-        
-                string aux = $$.label;
-
-                $$.label = genTemp();
-
-                $$.declaracao += "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-            }
-            else {
-            $$.label = genTemp();
-            $$.tipo = tabelaSimbolos[$3.label].tipo;
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-            }
-        }
-    }
-    //  NUM NUM
-    if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end() && (operador != ">" && operador != "<" && operador != ">=" && operador != "<=" && operador != "==" && operador != "!=" && operador != "&&" && operador != "||")){
-        if($1.tipo == "int" && $3.tipo == "float"){
-            $1.tipo = "float";
-            $$.label = genTemp();
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + $1.label + ";\n";
-            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-            string aux = $$.label;
-
-            $$.label = genTemp();
-            $$.tipo = "float";
-
-            $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
-            $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-        }
-        else if($1.tipo == "float" && $3.tipo == "int"){
-            $3.tipo = "float";
-            $$.label = genTemp();
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-            string aux = $$.label;
-
-            $$.label = genTemp();
-            $$.tipo = "float";
-
-            $$.traducao += "\t" + $$.label + " = " + $1.label + " " + operador + " " + aux + ";\n";
-            $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-        }
-        //IGUAIS
-        else {
-            $$.label = genTemp();
-            $$.tipo = $1.tipo;
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + $3.label + ";\n";
-            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-        }
-
-        //VAR NUMERO
-        if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end()) && tabelaSimbolos.find($3.label) == tabelaSimbolos.end()){
-            if(tabelaSimbolos[$1.label].tipo == "int" && $3.tipo == "float"){
-                $$.label = genTemp();
-                $$.tipo = "float";
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + tabelaSimbolos[$1.label].temp + ";\n";
-
-                string aux = $$.label;
-                
-                $$.label = genTemp();
-                $$.tipo = "float";
-
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + $3.label + ";\n";
-                $$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-        }
-        else if(tabelaSimbolos[$1.label].tipo == "float" && $3.tipo == "int"){
-            $3.tipo = "float";
-            $$.label = genTemp();
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $3.tipo + ")" + $3.label + ";\n";
-            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-            string aux = $$.label;
-
-            $$.label = genTemp();
-            $$.tipo = "float";
-
-            $$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + aux + ";\n";
-            $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-        }
-        //IGUAIS
-        else {
-            $$.label = genTemp();
-            $$.tipo = tabelaSimbolos[$1.label].tipo;
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + $3.label + ";\n";
-            $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-        }
-        }
-        //NUMERO VAR/*
-        else if(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && !(tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-            if($1.tipo == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" + $1.label + ";\n";
-
-                string aux = $$.label;
-                
-                $$.label = genTemp();
-                $$.tipo = "float";
-
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-                $$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-            }
-            else if($1.tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-                $3.tipo = "float";
-                $$.label = genTemp();
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $1.tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-                string aux = $$.label;
-
-                $$.label = genTemp();
-                $$.tipo = "float";
-
-                $$.traducao += "\t" + $$.label + " = " + $1.label + " " + operador + " " + aux + ";\n";
-                $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-            }
-        //IGUAIS
-            else {
-                $$.label = genTemp();
-                $$.tipo = tabelaSimbolos[$3.label].tipo;
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-            }
-        }
-        //VAR VAR
-        else if(!(tabelaSimbolos.find($1.label) == tabelaSimbolos.end() && tabelaSimbolos.find($3.label) == tabelaSimbolos.end())){
-            if(tabelaSimbolos[$1.label].tipo  == "int" && tabelaSimbolos[$3.label].tipo == "float"){
-                $$.label = genTemp();
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + tabelaSimbolos[$3.label].tipo + " " + $$.label + ";\n";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$3.label].tipo+ ")" +tabelaSimbolos[$1.label].temp + ";\n";
-
-                string aux = $$.label;
-                
-                $$.label = genTemp();
-                $$.tipo = "float";
-
-                $$.traducao += "\t" + $$.label + " = " + aux + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-                $$.declaracao += "\t" + $3.tipo + " " + $$.label + ";\n";
-            }
-            else if(tabelaSimbolos[$1.label].tipo == "float" && tabelaSimbolos[$3.label].tipo == "int"){
-                $3.tipo = "float";
-                $$.label = genTemp();
-                $$.tipo = "float";
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + tabelaSimbolos[$1.label].tipo + ")" + tabelaSimbolos[$3.label].temp + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $1.tipo + " " + $$.label + ";\n";
-
-                string aux = $$.label;
-
-                $$.label = genTemp();
-                $$.tipo = "float";
-
-                $$.traducao += "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + aux + ";\n";
-                $$.declaracao += "\t" + $1.tipo + " " + $$.label + ";\n";
-            }
-            //IGUAIS
-            else {
-                $$.label = genTemp();
-                $$.tipo = tabelaSimbolos[$1.label].tipo;
-                $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + tabelaSimbolos[$1.label].temp + " " + operador + " " + tabelaSimbolos[$3.label].temp + ";\n";
-                $$.declaracao = $1.declaracao + $3.declaracao +"\t" + $1.tipo + " " + $$.label + ";\n";
-            }
-        }
+    //aritimeticos
+    if(operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+        conversaoImplicitaOp($$,$1,$3,operador,"int");
     }
 }
+
+void empilha(){
+    pilha.push_back(unordered_map<string, TIPO_SIMBOLO>());
+}
+
+void desempilha(){
+    pilha.pop_back();
+}
+
 int main( int argc, char* argv[] )
 {
 	temp = 0;
