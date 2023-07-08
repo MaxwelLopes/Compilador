@@ -1,21 +1,17 @@
 int main(){ 
-   int a;
-   {
-    {
-        int x;
-        {x = true;
-            a = x;{
-                {
-                    {
-                        {
-                            {
-                                a = x;
-                            }
-                        }
-                    }
-                }
-            }
+    bool a;
+    a = true;
+    if(a && true){
+        a = true;
+        if(true){
+            a = false;
+        }
+        else{
+            a = false;
         }
     }
-   } 
-} 
+    else{
+        int b;
+        b = 23;
+    }
+}

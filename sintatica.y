@@ -46,7 +46,7 @@ int yylex(void);
 void yyerror(string);
 %}
 
-%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR TK_STRING TK_IF
+%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR TK_STRING TK_IF TK_ELSE
 %token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_CAST_FLOAT TK_CAST_INT TK_CAST_BOOL TK_TIPO_CHAR TK_TIPO_STRING
 %token TK_FIM TK_ERROR 
 
@@ -110,6 +110,14 @@ COMANDO     : BLOCO
             {
                 $$.traducao = $1.traducao;
                 $$.declaracao = $1.declaracao;
+            }
+            | IF 
+            {
+                $$.traducao = $1.traducao;
+            }
+            | IF_ELSE 
+            {
+                $$.traducao = $1.traducao;
             }
             | TK_TIPO_INT TK_ID ';'
             {
@@ -273,6 +281,67 @@ COMANDO     : BLOCO
             }
             ;
 
+IF          : TK_IF '(' E ')' BLOCO 
+            {   
+                if(verificaVar($3.label)){
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo != "bool"){
+                        yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
+                    }
+                    else{
+                        $$.label = genTemp();
+                        $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_IF" + ";\n";
+                        $$.traducao += $5.traducao + "\tFIM_IF;\n";
+                        $$.declaracao += $3.declaracao + $5.declaracao;
+                    }
+                }
+                else{
+                    if($3.tipo != "bool"){
+                        yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
+                    }
+                    else{
+                        $$.label = genTemp();
+                        $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_IF" + ";\n";
+                        $$.traducao += $5.traducao + "\tFIM_IF;\n";
+                        $$.declaracao += $3.declaracao + $5.declaracao;
+                    }
+                }
+            }
+            ;
+IF_ELSE     : TK_IF '(' E ')' BLOCO TK_ELSE BLOCO
+            {   
+                if(verificaVar($3.label)){
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo != "bool"){
+                        yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
+                    }
+                    else{
+                        $$.label = genTemp();
+                        $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_IF" + ";\n";
+                        $$.traducao += $5.traducao + "\tFIM_IF;\n";
+                        $$.declaracao += $3.declaracao + $5.declaracao;
+                    }
+                }
+                else{
+                    if($3.tipo != "bool"){
+                        yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
+                    }
+                    else{
+                        $$.label = genTemp();
+                        $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " else" + ";\n";
+                        $$.traducao += $5.traducao + "\tFIM_IF" + " goto" + " FIM_ELSE" + ";\n"; 
+                        $$.declaracao += $3.declaracao + $5.declaracao;
+                    }
+                }
+
+                // Adiciona a tradução e declaração do bloco do else
+                $$.traducao += "\telse\n" + $7.traducao + "\tFIM_ELSE;\n";
+                $$.declaracao += $7.declaracao;
+            }
+            ;
+
 E		   : E '>' E
             {	
 				operacao($$,$1,$2,$3, ">");
@@ -307,17 +376,21 @@ E		   : E '>' E
             }
             | NO E
             {	
-                if($2.tipo != "bool"){
-                    yyerror("ERRO: Operadores Lógicos só aceitam tipos Booleanos!");
-                }
+                
                 //VAR
                 if(verificaVar($2.label)){
+                    if(pilha[busca_escopo($2.label)][$2.label].tipo != "bool"){
+                        yyerror("ERRO: Operadores Lógicos só aceitam tipos Booleanos! PUTO");
+                    }
                     $$.label = genTemp();
                     $$.tipo = "bool";
                     $$.declaracao += $1.declaracao + $2.declaracao + "\t" + "int" + " " + $$.label + ";\n";
                     $$.traducao += $1.traducao + $2.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($2.label)][$2.label].temp + ";\n";
                 }else{
                     //NAO VAR
+                    if($2.tipo != "bool"){
+                        yyerror("ERRO: Operadores Lógicos só aceitam tipos Booleanos! PUTO");
+                    }
                     $$.label = genTemp();
                     $$.tipo = "bool";
                     $$.declaracao += $1.declaracao + $2.declaracao + "\t" + "int" + " " + $$.label + ";\n";

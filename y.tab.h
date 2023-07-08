@@ -55,26 +55,28 @@ extern int yydebug;
     TK_FALSE = 261,
     TK_CHAR = 262,
     TK_STRING = 263,
-    TK_MAIN = 264,
-    TK_ID = 265,
-    TK_TIPO_INT = 266,
-    TK_TIPO_FLOAT = 267,
-    TK_TIPO_BOOL = 268,
-    TK_CAST_FLOAT = 269,
-    TK_CAST_INT = 270,
-    TK_CAST_BOOL = 271,
-    TK_TIPO_CHAR = 272,
-    TK_TIPO_STRING = 273,
-    TK_FIM = 274,
-    TK_ERROR = 275,
-    AND = 276,
-    OR = 277,
-    NO = 278,
-    EQ = 279,
-    NE = 280,
-    GE = 281,
-    LE = 282,
-    TK_CAST_CHAR = 283
+    TK_IF = 264,
+    TK_ELSE = 265,
+    TK_MAIN = 266,
+    TK_ID = 267,
+    TK_TIPO_INT = 268,
+    TK_TIPO_FLOAT = 269,
+    TK_TIPO_BOOL = 270,
+    TK_CAST_FLOAT = 271,
+    TK_CAST_INT = 272,
+    TK_CAST_BOOL = 273,
+    TK_TIPO_CHAR = 274,
+    TK_TIPO_STRING = 275,
+    TK_FIM = 276,
+    TK_ERROR = 277,
+    AND = 278,
+    OR = 279,
+    NO = 280,
+    EQ = 281,
+    NE = 282,
+    GE = 283,
+    LE = 284,
+    TK_CAST_CHAR = 285
   };
 #endif
 /* Tokens.  */
@@ -84,26 +86,28 @@ extern int yydebug;
 #define TK_FALSE 261
 #define TK_CHAR 262
 #define TK_STRING 263
-#define TK_MAIN 264
-#define TK_ID 265
-#define TK_TIPO_INT 266
-#define TK_TIPO_FLOAT 267
-#define TK_TIPO_BOOL 268
-#define TK_CAST_FLOAT 269
-#define TK_CAST_INT 270
-#define TK_CAST_BOOL 271
-#define TK_TIPO_CHAR 272
-#define TK_TIPO_STRING 273
-#define TK_FIM 274
-#define TK_ERROR 275
-#define AND 276
-#define OR 277
-#define NO 278
-#define EQ 279
-#define NE 280
-#define GE 281
-#define LE 282
-#define TK_CAST_CHAR 283
+#define TK_IF 264
+#define TK_ELSE 265
+#define TK_MAIN 266
+#define TK_ID 267
+#define TK_TIPO_INT 268
+#define TK_TIPO_FLOAT 269
+#define TK_TIPO_BOOL 270
+#define TK_CAST_FLOAT 271
+#define TK_CAST_INT 272
+#define TK_CAST_BOOL 273
+#define TK_TIPO_CHAR 274
+#define TK_TIPO_STRING 275
+#define TK_FIM 276
+#define TK_ERROR 277
+#define AND 278
+#define OR 279
+#define NO 280
+#define EQ 281
+#define NE 282
+#define GE 283
+#define LE 284
+#define TK_CAST_CHAR 285
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
