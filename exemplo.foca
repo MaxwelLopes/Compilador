@@ -10,4 +10,11 @@ int main(){
             int b;
             b = 5;
     }
+    switch(i){
+        case 10:
+           i = 5472547;  
+        
+        default:
+           i = 572574;
+    }
 }

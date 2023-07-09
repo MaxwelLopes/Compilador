@@ -500,7 +500,7 @@ SWITCH     : TK_SWITCH '(' E ')' BLOCO_SWITCH
                 $$.traducao += $3.traducao + "\t" +rotuloIni + "\n" + $5.traducao; 
                 $$.declaracao += $3.declaracao + $5.declaracao;
                 $$.traducao += "\t" + rotuloFim + "\n";
-
+                defaultExecutado = false;
             }
             ;
 
@@ -565,6 +565,7 @@ CASE        : TK_CASE E TK_DP COMANDOS
                         $$.traducao += $4.traducao;
                         $$.traducao += "\t"+ rotuloFim +"\n";
                 }
+                
 
             }
             | TK_DEFAULT TK_DP COMANDOS
