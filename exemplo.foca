@@ -1,17 +1,13 @@
 int main(){ 
-    bool a;
-    a = true;
-    if(a && true){
-        a = true;
-        if(true){
-            a = false;
-        }
-        else{
-            a = false;
-        }
-    }
-    else{
-        int b;
-        b = 23;
+    int i;
+    i = 10;
+
+    switch(i){
+        case 10:
+            int a;
+            a = 43;
+        default:
+            int b;
+            b = 5;
     }
 }

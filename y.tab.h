@@ -57,26 +57,33 @@ extern int yydebug;
     TK_STRING = 263,
     TK_IF = 264,
     TK_ELSE = 265,
-    TK_MAIN = 266,
-    TK_ID = 267,
-    TK_TIPO_INT = 268,
-    TK_TIPO_FLOAT = 269,
-    TK_TIPO_BOOL = 270,
-    TK_CAST_FLOAT = 271,
-    TK_CAST_INT = 272,
-    TK_CAST_BOOL = 273,
-    TK_TIPO_CHAR = 274,
-    TK_TIPO_STRING = 275,
-    TK_FIM = 276,
-    TK_ERROR = 277,
-    AND = 278,
-    OR = 279,
-    NO = 280,
-    EQ = 281,
-    NE = 282,
-    GE = 283,
-    LE = 284,
-    TK_CAST_CHAR = 285
+    TK_FOR = 266,
+    TK_WHILE = 267,
+    TK_DO = 268,
+    TK_SWITCH = 269,
+    TK_CASE = 270,
+    TK_DP = 271,
+    TK_DEFAULT = 272,
+    TK_MAIN = 273,
+    TK_ID = 274,
+    TK_TIPO_INT = 275,
+    TK_TIPO_FLOAT = 276,
+    TK_TIPO_BOOL = 277,
+    TK_CAST_FLOAT = 278,
+    TK_CAST_INT = 279,
+    TK_CAST_BOOL = 280,
+    TK_TIPO_CHAR = 281,
+    TK_TIPO_STRING = 282,
+    TK_FIM = 283,
+    TK_ERROR = 284,
+    AND = 285,
+    OR = 286,
+    NO = 287,
+    EQ = 288,
+    NE = 289,
+    GE = 290,
+    LE = 291,
+    TK_CAST_CHAR = 292
   };
 #endif
 /* Tokens.  */
@@ -88,26 +95,33 @@ extern int yydebug;
 #define TK_STRING 263
 #define TK_IF 264
 #define TK_ELSE 265
-#define TK_MAIN 266
-#define TK_ID 267
-#define TK_TIPO_INT 268
-#define TK_TIPO_FLOAT 269
-#define TK_TIPO_BOOL 270
-#define TK_CAST_FLOAT 271
-#define TK_CAST_INT 272
-#define TK_CAST_BOOL 273
-#define TK_TIPO_CHAR 274
-#define TK_TIPO_STRING 275
-#define TK_FIM 276
-#define TK_ERROR 277
-#define AND 278
-#define OR 279
-#define NO 280
-#define EQ 281
-#define NE 282
-#define GE 283
-#define LE 284
-#define TK_CAST_CHAR 285
+#define TK_FOR 266
+#define TK_WHILE 267
+#define TK_DO 268
+#define TK_SWITCH 269
+#define TK_CASE 270
+#define TK_DP 271
+#define TK_DEFAULT 272
+#define TK_MAIN 273
+#define TK_ID 274
+#define TK_TIPO_INT 275
+#define TK_TIPO_FLOAT 276
+#define TK_TIPO_BOOL 277
+#define TK_CAST_FLOAT 278
+#define TK_CAST_INT 279
+#define TK_CAST_BOOL 280
+#define TK_TIPO_CHAR 281
+#define TK_TIPO_STRING 282
+#define TK_FIM 283
+#define TK_ERROR 284
+#define AND 285
+#define OR 286
+#define NO 287
+#define EQ 288
+#define NE 289
+#define GE 290
+#define LE 291
+#define TK_CAST_CHAR 292
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED

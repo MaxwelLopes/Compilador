@@ -22,6 +22,7 @@ void declarado(string chave);
 void empilha();
 void desempilha();
 string genTemp();
+string genRot();
 int busca_escopo(string var);
 int verificaVar(string var);
 int verificaVarBloco(string var);
@@ -40,13 +41,17 @@ typedef struct
 
 int bloco_atual = -1;
 vector<unordered_map<string, TIPO_SIMBOLO>> pilha; 
+vector<string> pilha_rotulo;
 int temp;
+int tempRot;
+bool bloco_switch = false;
+bool defaultExecutado = false;
 
 int yylex(void);
 void yyerror(string);
 %}
 
-%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR TK_STRING TK_IF TK_ELSE
+%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR TK_STRING TK_IF TK_ELSE TK_FOR TK_WHILE TK_DO TK_SWITCH TK_CASE TK_DP TK_DEFAULT
 %token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_CAST_FLOAT TK_CAST_INT TK_CAST_BOOL TK_TIPO_CHAR TK_TIPO_STRING
 %token TK_FIM TK_ERROR 
 
@@ -119,6 +124,29 @@ COMANDO     : BLOCO
             {
                 $$.traducao = $1.traducao;
             }
+            | WHILE 
+            {
+                $$.traducao = $1.traducao;
+            }
+            | DO_WHILE 
+            {
+                $$.traducao = $1.traducao;
+            }
+            | FOR
+            {
+                $$.traducao = $1.traducao;
+                $$.declaracao = $1.declaracao;
+            }
+            | SWITCH
+            {
+                $$.traducao = $1.traducao;
+                $$.declaracao = $1.declaracao;
+            }
+            /* | CASE
+            {
+                $$.traducao = $1.traducao;
+                $$.declaracao = $1.declaracao;
+            } */
             | TK_TIPO_INT TK_ID ';'
             {
                 declarado($2.label);
@@ -287,12 +315,16 @@ IF          : TK_IF '(' E ')' BLOCO
                     if(pilha[busca_escopo($3.label)][$3.label].tipo != "bool"){
                         yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
                     }
+                    if(pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
+                       yyerror("ERRO: Variável " + $3.label + " sem valor atribuido");
+                    }
                     else{
                         $$.label = genTemp();
+                        $$.declaracao = "\tint " + $$.label + ";\n";
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
                         $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_IF" + ";\n";
                         $$.traducao += $5.traducao + "\tFIM_IF;\n";
-                        $$.declaracao += $3.declaracao + $5.declaracao;
+                        $$.declaracao += $3.declaracao + $5.declaracao + "\tint " + $$.label + ";\n";
                     }
                 }
                 else{
@@ -304,7 +336,7 @@ IF          : TK_IF '(' E ')' BLOCO
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
                         $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_IF" + ";\n";
                         $$.traducao += $5.traducao + "\tFIM_IF;\n";
-                        $$.declaracao += $3.declaracao + $5.declaracao;
+                        $$.declaracao += $3.declaracao + $5.declaracao + "\tint " + $$.label + ";\n";
                     }
                 }
             }
@@ -315,12 +347,16 @@ IF_ELSE     : TK_IF '(' E ')' BLOCO TK_ELSE BLOCO
                     if(pilha[busca_escopo($3.label)][$3.label].tipo != "bool"){
                         yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
                     }
+                    if(pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
+                       yyerror("ERRO: Variável " + $3.label + " sem valor atribuido");
+                    }
                     else{
                         $$.label = genTemp();
+                        $$.declaracao = "\tint " + $$.label + ";\n";
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
                         $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_IF" + ";\n";
                         $$.traducao += $5.traducao + "\tFIM_IF;\n";
-                        $$.declaracao += $3.declaracao + $5.declaracao;
+                        $$.declaracao += $3.declaracao + $5.declaracao + "\tint " + $$.label + ";\n";
                     }
                 }
                 else{
@@ -329,10 +365,11 @@ IF_ELSE     : TK_IF '(' E ')' BLOCO TK_ELSE BLOCO
                     }
                     else{
                         $$.label = genTemp();
+                        $$.declaracao = "\tint " + $$.label + ";\n";
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
                         $$.traducao += "\tif("+ $$.label + ")" + " goto" + " else" + ";\n";
                         $$.traducao += $5.traducao + "\tFIM_IF" + " goto" + " FIM_ELSE" + ";\n"; 
-                        $$.declaracao += $3.declaracao + $5.declaracao;
+                        $$.declaracao += $3.declaracao + $5.declaracao + "\tint " + $$.label + ";\n";
                     }
                 }
 
@@ -341,6 +378,233 @@ IF_ELSE     : TK_IF '(' E ')' BLOCO TK_ELSE BLOCO
                 $$.declaracao += $7.declaracao;
             }
             ;
+
+FOR         : TK_FOR '(' E ';' E ';' E ')' BLOCO
+            {
+                if(verificaVar($5.label)){
+                    if(pilha[busca_escopo($5.label)][$5.label].tipo != "bool"){
+                        yyerror("Erro: A condição do 'for' deve ser uma expressão booleana válida");
+                    }
+                    if(pilha[busca_escopo($5.label)][$5.label].atribuido == 0){
+                       yyerror("ERRO: Variável " + $5.label + " sem valor atribuido");
+                    }
+                    else{
+                        string rotuloIni = genRot();
+                        string rotuloFim = genRot();
+                        $$.label = genTemp(); 
+                        $$.traducao += $3.traducao + "\t" +rotuloIni + "\n" + $5.traducao; 
+                        $$.traducao += "\t" + $$.label + " = " + "!" + pilha[busca_escopo($5.label)][$5.label].temp + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotuloFim + "\n";
+                        $$.declaracao += $3.declaracao + $5.declaracao + $7.declaracao + $9.declaracao + "\tint " + $$.label + ";\n";
+                        $$.traducao +=  $9.traducao + $7.traducao ;
+                        $$.traducao += string("\tgoto ") + rotuloIni + "\n\t" + rotuloFim + "\n";
+                    }
+                }
+                else{
+                    if($5.tipo != "bool"){
+                        yyerror("Erro: A condição do 'for' deve ser uma expressão booleana válida");
+                    }
+                    else{
+                        string rotuloIni = genRot();
+                        string rotuloFim = genRot();
+                        $$.label = genTemp(); 
+                        $$.traducao += $3.traducao + "\t" +rotuloIni + "\n" + $5.traducao;
+                        $$.traducao += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotuloFim + "\n";
+                        $$.declaracao += $3.declaracao + $5.declaracao + $7.declaracao + $9.declaracao + "\tint " + $$.label + ";\n";
+                        $$.traducao +=  $9.traducao + $7.traducao ;
+                        $$.traducao += string("\tgoto ") + rotuloIni + "\n\t" + rotuloFim + "\n";
+                    }
+                }
+            }
+            ;
+
+WHILE       : TK_WHILE '(' E ')' BLOCO
+            {
+                if(verificaVar($3.label)){
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo != "bool"){
+                        yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
+                    }
+                    if(pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
+                       yyerror("ERRO: Variável " + $3.label + " sem valor atribuido");
+                    }
+                    else{
+                        $$.traducao += "\t" + string("INICIO_WHILE:") + "\n";
+                        $$.label = genTemp();
+                        $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_WHILE" + ";\n";
+                        $$.traducao += $5.traducao + "\tgoto INICIO_WHILE;\n";
+                        $$.traducao += "\t" + string("FIM_WHILE;") + "\n";
+                        $$.declaracao += $3.declaracao + $5.declaracao;
+                    }
+                }
+                else{
+                    if($3.tipo != "bool"){
+                        yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
+                    }
+                    else{
+                        $$.traducao += "\t" + string("INICIO_WHILE:") + "\n";
+                        $$.label = genTemp();
+                        $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_WHILE" + ";\n";
+                        $$.traducao += $5.traducao + "\tgoto INICIO_WHILE;\n";
+                        $$.traducao += "\t" + string("FIM_WHILE;") + "\n";
+                        $$.declaracao += $3.declaracao + $5.declaracao;
+                    }
+                }
+            } 
+            ;
+
+DO_WHILE    : TK_DO BLOCO TK_WHILE '(' E ')' ';'
+            {
+                if(verificaVar($5.label)){
+                    if(pilha[busca_escopo($5.label)][$5.label].tipo != "bool"){
+                        yyerror("Erro: A condição do 'while' deve ser uma expressão booleana válida");
+                    }
+                    if(pilha[busca_escopo($5.label)][$5.label].atribuido == 0){
+                       yyerror("ERRO: Variável " + $5.label + " sem valor atribuido");
+                    }
+                    else{
+
+                        $$.traducao += "\t" + string("INI_DO_WHILE") + "\n";
+                        $$.declaracao += $2.declaracao + $5.declaracao;
+                        $$.traducao += $2.traducao + $5.traducao;
+                        $$.label = genTemp();
+                        $$.traducao += "\t" + $$.label + " = " + "!" + pilha[busca_escopo($5.label)][$5.label].temp + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_DO_WHILE" + ";\n";
+                        $$.traducao += "\tgoto INI_DO_WHILE\n";
+                    }
+                }
+                else{
+                    if($5.tipo != "bool"){
+                        yyerror("Erro: A condição do 'while' deve ser uma expressão booleana válida");
+                    }
+                    else{
+                        $$.traducao += "\t" + string("INI_DO_WHILE:") + "\n";
+                        $$.declaracao += $2.declaracao + $5.declaracao;
+                        $$.traducao += $2.traducao + $5.traducao;
+                        $$.label = genTemp();
+                        $$.traducao += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_DO_WHILE" + ";\n";
+                        $$.traducao += "\tgoto INI_DO_WHILE\n\tFIM_DO_WHILE\n";
+                    }
+                }
+            }
+            ;
+
+
+SWITCH     : TK_SWITCH '(' E ')' BLOCO_SWITCH
+            {
+                string rotuloIni = genRot();
+                string rotuloFim = genRot();
+                $$.traducao += $3.traducao + "\t" +rotuloIni + "\n" + $5.traducao; 
+                $$.declaracao += $3.declaracao + $5.declaracao;
+                $$.traducao += "\t" + rotuloFim + "\n";
+
+            }
+            ;
+
+BLOCO_SWITCH: '{' CASE_LISTA '}'
+            {
+                // Faça o processamento necessário para o bloco switch
+                $$.traducao += $2.traducao;
+                $$.declaracao += $2.declaracao;
+            }
+            ;
+
+CASE_LISTA  : CASE_STMT CASE_LISTA
+            {
+                $$.traducao += $2.traducao;
+                $$.declaracao += $2.declaracao;
+            }
+            |
+            {
+                // Caso base: não há mais casos na lista
+                $$.traducao = "";
+                $$.declaracao = "";
+            }
+            ;
+
+
+CASE_STMT   : CASE
+            {
+                // Faça o processamento necessário para o caso
+            }
+            ;
+
+CASE        : TK_CASE E TK_DP COMANDOS
+            {
+                if(verificaVar($2.label)){
+                    if(pilha[busca_escopo($2.label)][$2.label].atribuido == 0){
+                       yyerror("ERRO: Variável " + $2.label + " sem valor atribuido");
+                    }
+                    else{
+                        $$.declaracao += $2.declaracao + $4.declaracao;
+                        string rotuloIni = genRot();
+                        string rotuloFim = genRot();
+                        $$.label = genTemp();
+                        $$.declaracao += "\t" + string("int ") + $$.label + ";\n";
+                        $$.traducao += "\t" + rotuloIni + "\n"; 
+                        $$.traducao += $2.traducao;
+                        $$.traducao += "\t" + $$.label + " = " + "!" + pilha[busca_escopo($2.label)][$2.label].temp + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotuloFim + ";\n";
+                        $$.traducao += $4.traducao;
+                        $$.traducao += "\t"+ rotuloFim +"\n";
+                    }
+                }
+                else{
+                        $$.declaracao += $2.declaracao + $4.declaracao;
+                        string rotuloIni = genRot();
+                        string rotuloFim = genRot();
+                        $$.label = genTemp();
+                        $$.declaracao += "\t" + string("int ") + $$.label + ";\n";
+                        $$.traducao += "\t" + rotuloIni + "\n"; 
+                        $$.traducao += $2.traducao;
+                        $$.traducao += "\t" + $$.label + " = " + "!" + $2.label + ";\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotuloFim + ";\n";
+                        $$.traducao += $4.traducao;
+                        $$.traducao += "\t"+ rotuloFim +"\n";
+                }
+
+            }
+            | TK_DEFAULT TK_DP COMANDOS
+            {
+                if(defaultExecutado){
+                   yyerror("ERRO: Mais de um case padrão (default) encontrado.");
+                }else{
+                    $$.declaracao += $3.declaracao;
+                    string rotuloIni = genRot();
+                    string rotuloFim = genRot();
+                    $$.traducao += "\t" + rotuloIni + "\n"; 
+                    $$.traducao += $3.traducao;
+                    $$.traducao += "\t"+ rotuloFim +"\n";
+                    defaultExecutado = true;
+                }
+            }
+            ;
+
+/* CASE        : TK_CASE E TK_DP COMANDOS
+            {
+                // Faça o processamento necessário para o caso individual
+                $$.declaracao += $2.declaracao + $4.declaracao;
+                string rotuloIni = genRot();
+                string rotuloFim = genRot();
+                $$.label = genTemp();
+                $$.declaracao += "\t" + string("int ") + $$.label + ";\n";
+                $$.traducao += "\t" + rotuloIni + "\n"; 
+                $$.traducao += $2.traducao;
+                $$.traducao += "\t" + $$.label + " = " + "!" + $2.label + ";\n";
+                $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotuloFim + ";\n";
+                $$.traducao += $4.traducao;
+                $$.traducao += "\t"+ rotuloFim +"\n";
+            }
+            | TK_DEFAULT TK_DP COMANDOS
+            {
+                // ter algo para checar se já existe um default
+                //  multiple default labels in one switch
+            }
+            ; */
+
 
 E		   : E '>' E
             {	
@@ -430,7 +694,7 @@ E		   : E '>' E
                         yyerror("ERRO: Tipos difentes!");
                     }
                     if(pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
-                       //yyerror("ERRO linha " + contn + " : Variável " + $3.label + " sem valor atribuido");
+                       yyerror("ERRO: Variável " + $3.label + " sem valor atribuido");
                     }
                     
                     pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
@@ -607,6 +871,10 @@ E		   : E '>' E
                 //TIPO_SIMBOLO var = pilha[bloco_atual][$1.label];
                 //$$.tipo = var.tipo;
             }
+            |
+            {
+                
+            }
     		;
 %%
 
@@ -618,6 +886,11 @@ string genTemp()
 {
 	temp++;
 	return  "t" + std::to_string(temp);
+}
+string genRot()
+{
+	tempRot++;
+	return  "label_" + std::to_string(tempRot);
 }
 
 void declarado(string chave){
@@ -662,8 +935,8 @@ void conversaoImplicitaOp(atributos& $$, atributos& $1, atributos& $3, string op
         if(($1.tipo == "int" && $3.tipo == "float") || ($1.tipo == "float" && $3.tipo == "int") ){
             $$.label = genTemp();
             $$.tipo = "float";
-            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
-            $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + $1.label + ";\n";
+            $$.declaracao += $1.declaracao + $3.declaracao + "\t" + $$.tipo + " " + $$.label + ";\n";
+            $$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " +"(" + $$.tipo + ")" + $1.label + ";\n";
 
             string aux = $$.label;
             $$.label = genTemp();
@@ -717,6 +990,7 @@ void conversaoImplicitaOp(atributos& $$, atributos& $1, atributos& $3, string op
             else{
                 $$.tipo = "bool";
             }
+            $$.declaracao = $1.declaracao + $3.declaracao + "\t" + tipo + " " + $$.label + ";\n";
             $$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + pilha[busca_escopo($1.label)][$1.label].temp + " " + operador + " " + $3.label + ";\n";
         }
     }
@@ -836,6 +1110,7 @@ void desempilha(){
 int main( int argc, char* argv[] )
 {
 	temp = 0;
+    tempRot = 0;
 	yyparse();
 	
 
