@@ -12,9 +12,12 @@ using namespace std;
 struct atributos
 {
     string label;
+    string label2;
     string traducao;
     string declaracao;
-    string tipo;	
+    string tipo;
+    string valor;
+    string strcpy;
 };
 
 void naoDeclarado(string chave);
@@ -35,23 +38,28 @@ typedef struct
     string nome;
     string tipo;
 	string temp;
+    string valor;
     int atribuido;
     int bloco;
 } TIPO_SIMBOLO;
 
 int bloco_atual = -1;
 vector<unordered_map<string, TIPO_SIMBOLO>> pilha; 
-vector<string> pilha_rotulo;
+vector<tuple<string, string>> pilha_rotulo;
+bool gerouRotulo = false;
+
+vector<string> pilha_malloc;
 int temp;
 int tempRot;
 bool bloco_switch = false;
 bool defaultExecutado = false;
+string auxPrint;
 
 int yylex(void);
 void yyerror(string);
 %}
 
-%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR TK_STRING TK_IF TK_ELSE TK_FOR TK_WHILE TK_DO TK_SWITCH TK_CASE TK_DP TK_DEFAULT
+%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR TK_STRING TK_IF TK_ELSE TK_FOR TK_WHILE TK_DO TK_SWITCH TK_CASE TK_DP TK_DEFAULT TK_PRINT TK_SCAN TK_BREAK TK_CONTINUE
 %token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_CAST_FLOAT TK_CAST_INT TK_CAST_BOOL TK_TIPO_CHAR TK_TIPO_STRING
 %token TK_FIM TK_ERROR 
 
@@ -62,10 +70,13 @@ void yyerror(string);
 %left '>' '<' EQ NE GE LE
 %left '+' '-'
 %left '*' '/'
+%right '{'
+%right TK_BREAK
 
 %nonassoc TK_CAST_FLOAT 
 %nonassoc TK_CAST_INT 
 %nonassoc TK_CAST_CHAR
+
 
 %%
 
@@ -78,8 +89,7 @@ S           : TK_TIPO_INT TK_MAIN '(' ')' BLOCO
 
 BLOCO       : '{' INI COMANDOS FIM '}'
             {
-                
-                $$.traducao = $3.traducao;
+                $$.traducao = $3.traducao + $4.traducao;
 				$$.declaracao = $3.declaracao;
             }
             ;
@@ -95,6 +105,14 @@ FIM         :
             {
                 desempilha();
                 bloco_atual--;
+                string traducao;
+                while (pilha_malloc.size() != 0) {
+                    string aux = pilha_malloc.back();  // Obter o último elemento da pilha
+                    pilha_malloc.pop_back();           // Remover o último elemento da pilha
+
+                    traducao += string("\t") + string("free(") + aux + ");\n";  // Adicionar a instrução correspondente
+                }
+                $$.traducao = traducao;
             }
             ;
 
@@ -142,11 +160,15 @@ COMANDO     : BLOCO
                 $$.traducao = $1.traducao;
                 $$.declaracao = $1.declaracao;
             }
-            /* | CASE
+            | PRINT
             {
                 $$.traducao = $1.traducao;
                 $$.declaracao = $1.declaracao;
-            } */
+            }
+            | TK_ID '=' TK_SCAN '('')'';'
+            {   
+                $$.traducao = "\tcin >> " + pilha[busca_escopo($1.label)][$1.label].temp + ";\n";
+            }
             | TK_TIPO_INT TK_ID ';'
             {
                 declarado($2.label);
@@ -161,95 +183,6 @@ COMANDO     : BLOCO
                 $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
                 $$.traducao = "";
             }
-            | TK_TIPO_INT TK_ID '=' E';'
-            {
-                declarado($2.label);
-                TIPO_SIMBOLO var;
-                var.nome = $2.label;
-                var.tipo = "int";
-                var.atribuido = 0;
-				var.temp = genTemp();
-                var.bloco = bloco_atual;
-                pilha[bloco_atual][var.nome] = var;
-                $$.tipo = var.tipo;
-                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
-                $$.traducao = "";
-
-                //E -> VAR  
-                if(verificaVar($4.label)){
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "bool" && pilha[busca_escopo($4.label)][$4.label].tipo != "bool"){
-                        yyerror("ERRO: Tipos difentes!");
-                    }
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo != "bool" && pilha[busca_escopo($4.label)][$4.label].tipo == "bool"){
-                        yyerror("ERRO: Tipos difentes!");
-                    }
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "char" && pilha[busca_escopo($4.label)][$4.label].tipo != "char"){
-                        yyerror("ERRO: Tipos difentes!");
-                    }
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo != "char" && pilha[busca_escopo($4.label)][$4.label].tipo == "char"){
-                        yyerror("ERRO: Tipos difentes!");
-                    }
-                    
-                    pilha[busca_escopo($2.label)][$2.label].atribuido = 1;
-
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "float" && pilha[busca_escopo($4.label)][$4.label].tipo == "int"){
-                        $$.label = genTemp();
-                        $$.declaracao += $2.declaracao + $2.declaracao + "\t" + "float" + " " + $$.label + ";\n";
-                        $$.traducao += $2.traducao + $4.traducao + "\t" + $$.label + " = " + "(" + "float" + ")" + pilha[busca_escopo($4.label)][$4.label].temp + ";\n";
-                        $$.traducao += "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $$.label + ";\n";
-				    }
-                    else if(pilha[busca_escopo($2.label)][$2.label].tipo == "int" && $4.tipo == "float"){
-                        $$.label = genTemp();
-                        $$.declaracao += $2.declaracao + $4.declaracao + "\t" + "int" + " " + $$.label + ";\n";
-                        $$.traducao += $2.traducao + $4.traducao + "\t" + $$.label + " = " + "(" + "int" + ")" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
-                        $$.traducao += "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $$.label + ";\n";
-                    }
-				    //IGUAIS
-                    else{
-                        pilha[busca_escopo($2.label)][$2.label].atribuido = 1;
-                        $$.declaracao += $2.declaracao + $4.declaracao;
-                        $$.traducao += $2.traducao + $4.traducao + "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + pilha[busca_escopo($4.label)][$4.label].temp + ";\n";
-                    }
-                }
-                else{
-                    //E -> NUM
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "bool" && $4.tipo != "bool"){
-                        yyerror("ERRO: Tipos difentes!");
-                    } 
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo != "bool" && $4.tipo == "bool"){
-                        yyerror("ERRO: Tipos difentes!");
-                    } 
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "char" && $4.tipo != "char"){
-                        yyerror("ERRO: Tipos difentes!");
-                    }
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo != "char" && $4.tipo == "char"){
-                        yyerror("ERRO: Tipos difentes!");
-                    }
-                    
-                    pilha[busca_escopo($2.label)][$2.label].atribuido = 1;
-                    
-                    if(pilha[busca_escopo($2.label)][$2.label].tipo == "float" && $3.tipo == "int"){
-                        $3.tipo = "float";
-                        $$.label = genTemp();
-                        $$.declaracao += $2.declaracao + $4.declaracao + "\t" + $4.tipo + " " + $$.label + ";\n";
-                        $$.traducao += $2.traducao + $4.traducao + "\t" + $$.label + " = " + "(" + $4.tipo + ")" + $4.label + ";\n";
-                        $$.traducao += "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $$.label + ";\n";
-                    }
-                    else if(pilha[busca_escopo($2.label)][$2.label].tipo == "int" && $4.tipo == "float"){
-                        $3.tipo = "int";
-                        $$.label = genTemp();
-                        $$.declaracao += $2.declaracao + $4.declaracao + "\t" + $4.tipo + " " + $$.label + ";\n";
-                        $$.traducao += $2.traducao + $4.traducao + "\t" + $$.label + " = " + "(" + $4.tipo + ")" + $4.label + ";\n";
-                        $$.traducao += "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $$.label + ";\n";
-                    }
-                    //IGUAIS -string
-                    else{
-                        $$.declaracao += $2.declaracao + $4.declaracao;
-                        $$.traducao += $2.traducao + $4.traducao + "\t" + pilha[busca_escopo($2.label)][$2.label].temp + " = " + $4.label + ";\n";
-                    }
-                }
-            }
-
             | TK_TIPO_FLOAT TK_ID';'
             {
                 declarado($2.label);
@@ -304,8 +237,8 @@ COMANDO     : BLOCO
                 var.bloco = bloco_atual;
                 pilha[bloco_atual][var.nome] = var;
                 $$.tipo = var.tipo;
-                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
-                $$.traducao = "";
+                $$.declaracao = "\t" + string("char") + " *" + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
+                $$.traducao += "";
             }
             ;
 
@@ -379,7 +312,7 @@ IF_ELSE     : TK_IF '(' E ')' BLOCO TK_ELSE BLOCO
             }
             ;
 
-FOR         : TK_FOR '(' E ';' E ';' E ')' BLOCO
+FOR         : TK_FOR '(' E ';' E ';' E ')' BLOCO_LOOP
             {
                 if(verificaVar($5.label)){
                     if(pilha[busca_escopo($5.label)][$5.label].tipo != "bool"){
@@ -389,15 +322,17 @@ FOR         : TK_FOR '(' E ';' E ';' E ')' BLOCO
                        yyerror("ERRO: Variável " + $5.label + " sem valor atribuido");
                     }
                     else{
-                        string rotuloIni = genRot();
-                        string rotuloFim = genRot();
+                        string iniRotulo = get<0>(pilha_rotulo.back());
+                        string fimRotulo = get<1>(pilha_rotulo.back());
+                        pilha_rotulo.pop_back();
+                        gerouRotulo = false;
                         $$.label = genTemp(); 
-                        $$.traducao += $3.traducao + "\t" +rotuloIni + "\n" + $5.traducao; 
+                        $$.traducao += $3.traducao + "\t" +iniRotulo + "\n" + $5.traducao; 
                         $$.traducao += "\t" + $$.label + " = " + "!" + pilha[busca_escopo($5.label)][$5.label].temp + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotuloFim + "\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + "\n";
                         $$.declaracao += $3.declaracao + $5.declaracao + $7.declaracao + $9.declaracao + "\tint " + $$.label + ";\n";
                         $$.traducao +=  $9.traducao + $7.traducao ;
-                        $$.traducao += string("\tgoto ") + rotuloIni + "\n\t" + rotuloFim + "\n";
+                        $$.traducao += "\t" + fimRotulo;  
                     }
                 }
                 else{
@@ -405,21 +340,23 @@ FOR         : TK_FOR '(' E ';' E ';' E ')' BLOCO
                         yyerror("Erro: A condição do 'for' deve ser uma expressão booleana válida");
                     }
                     else{
-                        string rotuloIni = genRot();
-                        string rotuloFim = genRot();
+                        string iniRotulo = get<0>(pilha_rotulo.back());
+                        string fimRotulo = get<1>(pilha_rotulo.back());
+                        pilha_rotulo.pop_back();
                         $$.label = genTemp(); 
-                        $$.traducao += $3.traducao + "\t" +rotuloIni + "\n" + $5.traducao;
+                        $$.traducao += $3.traducao + "\t" + iniRotulo + "\n" + $5.traducao;
                         $$.traducao += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotuloFim + "\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + "\n";
                         $$.declaracao += $3.declaracao + $5.declaracao + $7.declaracao + $9.declaracao + "\tint " + $$.label + ";\n";
                         $$.traducao +=  $9.traducao + $7.traducao ;
-                        $$.traducao += string("\tgoto ") + rotuloIni + "\n\t" + rotuloFim + "\n";
+                        $$.traducao += string("\tgoto ") + iniRotulo + "\n\t" + fimRotulo + "\n";
                     }
                 }
+                gerouRotulo = false;
             }
             ;
 
-WHILE       : TK_WHILE '(' E ')' BLOCO
+WHILE       : TK_WHILE '(' E ')' BLOCO_LOOP
             {
                 if(verificaVar($3.label)){
                     if(pilha[busca_escopo($3.label)][$3.label].tipo != "bool"){
@@ -429,12 +366,16 @@ WHILE       : TK_WHILE '(' E ')' BLOCO
                        yyerror("ERRO: Variável " + $3.label + " sem valor atribuido");
                     }
                     else{
-                        $$.traducao += "\t" + string("INICIO_WHILE:") + "\n";
+                        string iniRotulo = get<0>(pilha_rotulo.back());
+                        string fimRotulo = get<1>(pilha_rotulo.back());
+                        pilha_rotulo.pop_back();
+                        gerouRotulo = false;
+                        $$.traducao += "\t" + iniRotulo + "\n";
                         $$.label = genTemp();
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_WHILE" + ";\n";
-                        $$.traducao += $5.traducao + "\tgoto INICIO_WHILE;\n";
-                        $$.traducao += "\t" + string("FIM_WHILE;") + "\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
+                        $$.traducao += $5.traducao + "\tgoto " + iniRotulo +"\n";
+                        $$.traducao += "\t" + fimRotulo + "\n";
                         $$.declaracao += $3.declaracao + $5.declaracao;
                     }
                 }
@@ -443,19 +384,24 @@ WHILE       : TK_WHILE '(' E ')' BLOCO
                         yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
                     }
                     else{
-                        $$.traducao += "\t" + string("INICIO_WHILE:") + "\n";
+                        string iniRotulo = get<0>(pilha_rotulo.back());
+                        string fimRotulo = get<1>(pilha_rotulo.back());
+                        pilha_rotulo.pop_back();
+                        gerouRotulo = false;
+                        $$.traducao += "\t" + iniRotulo + "\n";
                         $$.label = genTemp();
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_WHILE" + ";\n";
-                        $$.traducao += $5.traducao + "\tgoto INICIO_WHILE;\n";
-                        $$.traducao += "\t" + string("FIM_WHILE;") + "\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
+                        $$.traducao += $5.traducao + "\tgoto " + iniRotulo +"\n";
+                        $$.traducao += "\t" + fimRotulo + "\n";
                         $$.declaracao += $3.declaracao + $5.declaracao;
                     }
                 }
-            } 
+                gerouRotulo = false;
+            }
             ;
 
-DO_WHILE    : TK_DO BLOCO TK_WHILE '(' E ')' ';'
+DO_WHILE    : TK_DO BLOCO_LOOP TK_WHILE '(' E ')' ';'
             {
                 if(verificaVar($5.label)){
                     if(pilha[busca_escopo($5.label)][$5.label].tipo != "bool"){
@@ -465,14 +411,16 @@ DO_WHILE    : TK_DO BLOCO TK_WHILE '(' E ')' ';'
                        yyerror("ERRO: Variável " + $5.label + " sem valor atribuido");
                     }
                     else{
-
-                        $$.traducao += "\t" + string("INI_DO_WHILE") + "\n";
+                        string iniRotulo = get<0>(pilha_rotulo.back());
+                        string fimRotulo = get<1>(pilha_rotulo.back());
+                        pilha_rotulo.pop_back();
+                        $$.traducao += "\t" + iniRotulo + "\n";
                         $$.declaracao += $2.declaracao + $5.declaracao;
                         $$.traducao += $2.traducao + $5.traducao;
                         $$.label = genTemp();
                         $$.traducao += "\t" + $$.label + " = " + "!" + pilha[busca_escopo($5.label)][$5.label].temp + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_DO_WHILE" + ";\n";
-                        $$.traducao += "\tgoto INI_DO_WHILE\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
+                        $$.traducao += "\t"+ iniRotulo +"\n";
                     }
                 }
                 else{
@@ -480,18 +428,62 @@ DO_WHILE    : TK_DO BLOCO TK_WHILE '(' E ')' ';'
                         yyerror("Erro: A condição do 'while' deve ser uma expressão booleana válida");
                     }
                     else{
-                        $$.traducao += "\t" + string("INI_DO_WHILE:") + "\n";
+                        string iniRotulo = get<0>(pilha_rotulo.back());
+                        string fimRotulo = get<1>(pilha_rotulo.back());
+                        pilha_rotulo.pop_back();
+                        $$.traducao += "\t" + iniRotulo + "\n";
                         $$.declaracao += $2.declaracao + $5.declaracao;
                         $$.traducao += $2.traducao + $5.traducao;
                         $$.label = genTemp();
                         $$.traducao += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_DO_WHILE" + ";\n";
-                        $$.traducao += "\tgoto INI_DO_WHILE\n\tFIM_DO_WHILE\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
+                        $$.traducao += "\t"+ iniRotulo +"\n";
                     }
                 }
+                gerouRotulo = false;
             }
             ;
 
+BLOCO_LOOP  : '{' INI CMD FIM '}'
+            {
+                $$.declaracao += $3.declaracao;
+                $$.traducao += $3.traducao;
+                if(!gerouRotulo){
+                    pilha_rotulo.push_back(make_tuple(genRot(),genRot())); //ini fim
+                }
+            }
+            
+            ;
+CMD         :COMANDOS BREAK_OR_CONTINUE CMD {
+                $$.declaracao = $1.declaracao + $2.declaracao + $3.declaracao;
+                $$.traducao = $1.traducao + $2.traducao + $3.traducao;
+            }
+            |COMANDOS
+            {
+                $$.declaracao = $1.declaracao;
+                $$.traducao = $1.traducao;
+            }
+            ;
+
+BREAK_OR_CONTINUE :TK_BREAK ';' 
+            {     
+                if(!gerouRotulo){
+                    pilha_rotulo.push_back(make_tuple(genRot(),genRot())); //ini fim
+                    gerouRotulo = true;
+                }
+                string lula = get<1>(pilha_rotulo.back());
+                $$.traducao += "\t" + string("goto ") + lula + ";\n";
+            }
+            | TK_CONTINUE ';' 
+            {
+                if(!gerouRotulo){
+                    pilha_rotulo.push_back(make_tuple(genRot(),genRot())); //ini fim
+                    gerouRotulo = true;
+                }
+                string iniRotulo = get<0>(pilha_rotulo.back());
+                $$.traducao += "\t" + string("goto ") + iniRotulo + ";\n"; 
+            }
+            ;
 
 SWITCH     : TK_SWITCH '(' E ')' BLOCO_SWITCH
             {
@@ -584,28 +576,90 @@ CASE        : TK_CASE E TK_DP COMANDOS
             }
             ;
 
-/* CASE        : TK_CASE E TK_DP COMANDOS
-            {
-                // Faça o processamento necessário para o caso individual
-                $$.declaracao += $2.declaracao + $4.declaracao;
-                string rotuloIni = genRot();
-                string rotuloFim = genRot();
-                $$.label = genTemp();
-                $$.declaracao += "\t" + string("int ") + $$.label + ";\n";
-                $$.traducao += "\t" + rotuloIni + "\n"; 
-                $$.traducao += $2.traducao;
-                $$.traducao += "\t" + $$.label + " = " + "!" + $2.label + ";\n";
-                $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotuloFim + ";\n";
-                $$.traducao += $4.traducao;
-                $$.traducao += "\t"+ rotuloFim +"\n";
-            }
-            | TK_DEFAULT TK_DP COMANDOS
-            {
-                // ter algo para checar se já existe um default
-                //  multiple default labels in one switch
-            }
-            ; */
+PRINT       : TK_PRINT '(' EXPRESSAO ')' ';'
+            {   
+                $$.declaracao += $3.declaracao;
 
+                $$.traducao += $3.strcpy + auxPrint + "\t" + string("cout << ") + $3.traducao + ";\n";
+                auxPrint = "";
+            }
+            ;
+
+EXPRESSAO   : TEXTO
+            {
+                $$.declaracao = $1.declaracao;
+                $$.traducao = $1.traducao;
+                $$.strcpy = $1.strcpy;
+            }
+            | TEXTO '+' EXPRESSAO
+            {
+                if(verificaVar($3.label)){
+                    string tipo = pilha[busca_escopo($3.label)][$3.label].tipo;
+                    if(tipo == "int" || tipo == "float" || tipo == "bool"){
+                        yyerror("Apenas valores do tipo 'char' ou 'string' podem ser concatenados!");
+                    }
+                    
+                } // ##############################################
+                //VAR NUM
+                if(verificaVar($$.label) && !verificaVar($3.label)){
+                    string aux = genTemp();
+                    $$.declaracao += $3.declaracao + "\tchar " + aux + "[" + to_string(pilha[busca_escopo($$.label)][$$.label].valor.length() + $3.label.length() - 2) + "];\n";
+                    $$.strcpy += $3.strcpy;
+                    auxPrint += "\tstrcpy(" + aux + ", strcat(" + $$.traducao + ", " + $3.label2 + "));\n";
+                    $$.traducao = aux;
+                //VAR VAR
+                }else if(verificaVar($$.label) && verificaVar($$.label)){
+                    string aux = genTemp();
+                    $$.declaracao += $3.declaracao + "\tchar " + aux + "[" + to_string(pilha[busca_escopo($$.label)][$$.label].valor.length() + pilha[busca_escopo($3.label)][$3.label].valor.length() - 2) + "];\n";
+                    $$.strcpy += $3.strcpy;
+                    auxPrint += "\tstrcpy(" + aux + ", strcat(" + $$.traducao + ", " + pilha[busca_escopo($3.label)][$3.label].temp + "));\n";
+                    $$.traducao = aux;
+                //NUM VAR
+                }else if(!verificaVar($$.label) && verificaVar($3.label)){
+                    string aux = genTemp();
+                    $$.declaracao += $3.declaracao + "\tchar " + aux + "["  + to_string($$.traducao.length() + pilha[busca_escopo($3.label)][$3.label].valor.length() - 2) + "];\n";
+                    $$.strcpy += $3.strcpy;
+                    auxPrint += "\tstrcpy(" + aux + ", strcat(" + $$.traducao + ", " + pilha[busca_escopo($3.label)][$3.label].temp + "));\n";
+                    $$.traducao = aux;
+                }
+                //NUM NUM
+                else{
+                    $$.label = genTemp();
+                    $$.declaracao += $3.declaracao + "\tchar " + $$.label + "[" + to_string($$.traducao.length() + $3.traducao.length() - 2) + "];\n";
+                    $$.strcpy += $3.strcpy;
+                    auxPrint += "\tstrcpy(" + $$.label + ", strcat(" + $$.label2 + ", " + $3.label2 + "));\n";
+                    $$.traducao = $$.label;
+                }
+                
+                
+            }
+            ;
+
+TEXTO       : TK_STRING
+            {   
+                $$.tipo = "string";
+                $$.label = genTemp();
+                $$.valor = $1.label;
+                $$.declaracao += "\t" + string("char") + " " + $$.label + string("[") + to_string($1.label.length()-1) +string("]")+ ";\n";
+                $$.strcpy += "\t" + string("strcpy(") + $$.label + ", "+ $1.label + ")"+";\n"; 
+                $$.traducao += $$.valor;
+                $$.label2 += $$.label;
+            }
+            | TK_CHAR
+            {
+                $$.tipo = "char";
+                $$.label = genTemp();
+                $$.valor = $1.label;
+                $$.declaracao += "\t" + string("char") + " " + $$.label + string("[") + to_string($1.label.length()-1) +string("]")+ ";\n";
+                $$.strcpy += "\t" + string("strcpy(") + $$.label + ", "+ $1.label + ")"+";\n";
+                $$.traducao += $1.label;
+            }
+            | TK_ID
+            {
+                $$.traducao += pilha[busca_escopo($1.label)][$1.label].temp;
+            }
+            ;
+            
 
 E		   : E '>' E
             {	
@@ -645,7 +699,7 @@ E		   : E '>' E
                 //VAR
                 if(verificaVar($2.label)){
                     if(pilha[busca_escopo($2.label)][$2.label].tipo != "bool"){
-                        yyerror("ERRO: Operadores Lógicos só aceitam tipos Booleanos! PUTO");
+                        yyerror("ERRO: Operadores Lógicos só aceitam tipo Booleano!");
                     }
                     $$.label = genTemp();
                     $$.tipo = "bool";
@@ -654,7 +708,7 @@ E		   : E '>' E
                 }else{
                     //NAO VAR
                     if($2.tipo != "bool"){
-                        yyerror("ERRO: Operadores Lógicos só aceitam tipos Booleanos! PUTO");
+                        yyerror("ERRO: Operadores Lógicos só aceitam tipos Booleano!");
                     }
                     $$.label = genTemp();
                     $$.tipo = "bool";
@@ -694,19 +748,25 @@ E		   : E '>' E
                     if(pilha[busca_escopo($1.label)][$1.label].tipo != "char" && pilha[busca_escopo($3.label)][$3.label].tipo == "char"){
                         yyerror("ERRO: Tipos difentes!");
                     }
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "string" && pilha[busca_escopo($3.label)][$3.label].tipo != "string"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo != "string" && pilha[busca_escopo($3.label)][$3.label].tipo == "string"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
                     if(pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
                        yyerror("ERRO: Variável " + $3.label + " sem valor atribuido");
                     }
                     
-                    pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
-
                     if(pilha[busca_escopo($1.label)][$1.label].tipo == "float" && pilha[busca_escopo($3.label)][$3.label].tipo == "int"){
+                        pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
                         $$.label = genTemp();
                         $$.declaracao += $1.declaracao + $3.declaracao + "\t" + "float" + " " + $$.label + ";\n";
                         $$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + "float" + ")" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
                         $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $$.label + ";\n";
 				    }
                     else if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" && $3.tipo == "float"){
+                        pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
                         $$.label = genTemp();
                         $$.declaracao += $1.declaracao + $3.declaracao + "\t" + "int" + " " + $$.label + ";\n";
                         $$.traducao += $1.traducao + $3.traducao + "\t" + $$.label + " = " + "(" + "int" + ")" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
@@ -716,7 +776,14 @@ E		   : E '>' E
                     else{
                         pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
                         $$.declaracao += $1.declaracao + $3.declaracao;
-                        $$.traducao += $1.traducao + $3.traducao + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+                            if(pilha[busca_escopo($1.label)][$1.label].tipo == "string"){
+                                pilha[busca_escopo($1.label)][$1.label].valor = $3.valor;
+                                $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + string("(char*) malloc(") + to_string(pilha[busca_escopo($3.label)][$3.label].valor.length()-1) + string(")") + ";\n";
+                                $$.traducao += "\t" + string("strcpy(") + pilha[busca_escopo($1.label)][$1.label].temp + string(", ") + pilha[busca_escopo($3.label)][$3.label].temp + ");\n";
+                            }else{
+                                $$.traducao += $1.traducao + $3.traducao + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
+                            }
+                        pilha_malloc.push_back(pilha[busca_escopo($1.label)][$1.label].temp);
                     }
                 }
                 else{
@@ -733,12 +800,13 @@ E		   : E '>' E
                     if(pilha[busca_escopo($1.label)][$1.label].tipo != "char" && $3.tipo == "char"){
                         yyerror("ERRO: Tipos difentes!");
                     }
-                    if(1){
-                        pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
-                    }
+                    if((pilha[busca_escopo($1.label)][$1.label].tipo == "string") && ($3.tipo != "string")){
+                        yyerror("ERRO: Tipos difentes!");
+                    }       
                     
                     
                     if(pilha[busca_escopo($1.label)][$1.label].tipo == "float" && $3.tipo == "int"){
+                        pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
                         $3.tipo = "float";
                         $$.label = genTemp();
                         $$.declaracao += $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
@@ -746,6 +814,7 @@ E		   : E '>' E
                         $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $$.label + ";\n";
                     }
                     else if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" && $3.tipo == "float"){
+                        pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
                         $3.tipo = "int";
                         $$.label = genTemp();
                         $$.declaracao += $1.declaracao + $3.declaracao + "\t" + $3.tipo + " " + $$.label + ";\n";
@@ -753,6 +822,26 @@ E		   : E '>' E
                         $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $$.label + ";\n";
                     }
                     //IGUAIS -string
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "string"){
+                        if(pilha[busca_escopo($1.label)][$1.label].atribuido == 1){
+                            int i;
+                            for (i = 0; i < pilha_malloc.size(); i++) {
+                                if (pilha_malloc[i] == pilha[busca_escopo($1.label)][$1.label].temp) {
+                                    break; 
+                                }
+                            }
+                            string aux = pilha_malloc[i];  // Obter o último elemento da pilha
+                            pilha_malloc.erase(pilha_malloc.begin() + i);  // Remover o último elemento da pilha
+                            $$.traducao += string("\t") + string("free(") + aux + ");\n";  // Adicionar a instrução 
+                        }
+                        pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
+                        pilha[busca_escopo($1.label)][$1.label].valor = $3.valor;
+                        $$.declaracao += $1.declaracao + $3.declaracao;
+                        $$.traducao += "\t" + string("strcpy(") + $3.label + string(", ") + $3.valor + ");\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + string("(char*) malloc(") + to_string($3.valor.length()-1) + string(")") + ";\n";
+                        $$.traducao += "\t" + string("strcpy(") + pilha[busca_escopo($1.label)][$1.label].temp + string(", ") + $3.label + ");\n";
+                        pilha_malloc.push_back(pilha[busca_escopo($1.label)][$1.label].temp);
+                    }
                     else{
                         pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
                         $$.declaracao += $1.declaracao + $3.declaracao;
@@ -789,11 +878,10 @@ E		   : E '>' E
             {
                 $$.tipo = "string";
                 $$.label = genTemp();
-                $$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
-                $$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
+                $$.valor = $1.label;
+                $$.declaracao += "\t" + string("char") + " " + $$.label + string("[") +to_string($1.label.length()-1) +string("]")+ ";\n";
+                $$.traducao += "\t" + string("strcpy(") + $$.label + ", " + $1.label + ");\n";
                 //$$.label = $1.label;
-
-                
             }
 			| TK_FALSE
             {
@@ -877,6 +965,7 @@ E		   : E '>' E
                 
             }
     		;
+
 %%
 
 #include "lex.yy.c"
@@ -1062,30 +1151,138 @@ void conversaoImplicitaOp(atributos& $$, atributos& $1, atributos& $3, string op
 }
 
 void operacao(atributos& $$, atributos& $1, atributos& $2, atributos& $3, string operador){
-    string tipo = "int";
-    if(verificaVar($1.label)){
-        if (pilha[busca_escopo($1.label)][$1.label].atribuido == 0){
-            yyerror("ERRO: Variável " + $1.label + " sem valor atribuido!");
+    if(verificaVar($1.label) || verificaVar($3.label)){
+        // $1 var
+        if(verificaVar($1.label)){
+            if (pilha[busca_escopo($1.label)][$1.label].atribuido == 0){
+                yyerror("ERRO: variável " + $1.label + " sem valor atribuido!");
+            }
+            if(operador == "||" || operador == "&&"){
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" || pilha[busca_escopo($1.label)][$1.label].tipo  == "float" || pilha[busca_escopo($1.label)][$1.label].tipo == "char" || pilha[busca_escopo($1.label)][$1.label].tipo == "string" || $3.tipo == "int" || $3.tipo == "float" || $3.tipo == "char" || $3.tipo == "string"){
+                    yyerror("ERRO: Operadores lógicos só aceitam tipo Booleano!");
+                }
+            }
+            if(operador == ">" || operador == "<" || operador == ">=" || operador == "<="){
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "bool" ||  $3.tipo == "bool"){
+                    yyerror("ERRO: Operadores relacionais não aceitam tipo Booleano!");
+                }
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "string" ||  $3.tipo == "string"){
+                    yyerror("ERRO: Operadores relacionais não aceitam tipo string!");
+                }
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "char" ||  $3.tipo == "char"){
+                yyerror("ERRO: Operadores relacionais não aceitam tipo char!");
+                }
+            }
+            if (operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "bool" || $3.tipo == "bool"){
+                    yyerror("Erro: operações aritiméticas não aceitam booleanos!");
+                }
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "string" ||  $3.tipo == "string"){
+                    yyerror("ERRO: Operadores aritiméticos não aceitam tipo string!");
+                }
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "char" ||  $3.tipo == "char"){
+                    yyerror("ERRO: Operadores aritiméticos não aceitam tipo char!");
+                }
+            }
+        }
+        // $3 var
+        if(verificaVar($3.label)){ 
+            if (pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
+                yyerror("ERRO: Variável " + $3.label + " sem valor atribuido!");
+            }
+            if(operador == "||" || operador == "&&"){
+                if($1.tipo == "int" || $1.tipo == "float" || $1.tipo == "char" || $1.tipo == "string" || pilha[busca_escopo($3.label)][$3.label].tipo == "int" || pilha[busca_escopo($3.label)][$3.label].tipo == "float" || pilha[busca_escopo($3.label)][$3.label].tipo == "char" || pilha[busca_escopo($3.label)][$3.label].tipo == "string"){
+                    yyerror("ERRO: Operadores Lógicos só aceitam tipo Booleano!");
+                }
+            }
+            if(operador == ">" || operador == "<" || operador == ">=" || operador == "<="){
+                if($1.tipo == "bool" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "bool"){
+                    yyerror("ERRO: Operadores Relacionais não aceitam tipo Booleano!");
+                }
+                if($1.tipo == "string" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "string"){
+                    yyerror("ERRO: Operadores Relacionais não aceitam tipo string!");
+                }
+                if($1.tipo == "char" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "char"){
+                yyerror("ERRO: Operadores relacionais não aceitam tipo char!");
+                }
+            }
+            if (operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                if($1.tipo == "bool" || pilha[busca_escopo($3.label)][$3.label].tipo == "bool"){
+                    yyerror("Erro: operações aritiméticas não aceitam booleanos!");
+                }
+                if($1.tipo == "string" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "string"){
+                    yyerror("ERRO: Operadores aritiméticos não aceitam tipo string!");
+                }
+                if($1.tipo == "char" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "char"){
+                    yyerror("ERRO: Operadores aritiméticos não aceitam tipo char!");
+                }
+            }
+        }
+        // $1 e $3 var
+        if(verificaVar($1.label) && verificaVar($3.label)){
+            if (pilha[busca_escopo($1.label)][$1.label].atribuido == 0){
+                yyerror("ERRO: Variável " + $1.label + " sem valor atribuido!");
+            }
+            if (pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
+                yyerror("ERRO: Variável " + $3.label + " sem valor atribuido!");
+            }
+            if(operador == "||" || operador == "&&"){
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" || pilha[busca_escopo($1.label)][$1.label].tipo == "float" || pilha[busca_escopo($1.label)][$1.label].tipo == "char" || pilha[busca_escopo($1.label)][$1.label].tipo == "string" || pilha[busca_escopo($3.label)][$3.label].tipo == "int" || pilha[busca_escopo($3.label)][$3.label].tipo == "float" || pilha[busca_escopo($3.label)][$3.label].tipo == "char" || pilha[busca_escopo($3.label)][$3.label].tipo == "string"){
+                    yyerror("ERRO: Operadores Lógicos só aceitam tipo Booleano!");
+                }
+            }
+            if(operador == ">" || operador == "<" || operador == ">=" || operador == "<="){
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "bool" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "bool"){
+                    yyerror("ERRO: Operadores Relacionais não aceitam tipo Booleano!");
+                }
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "string" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "string"){
+                    yyerror("ERRO: Operadores Relacionais não aceitam tipo string!");
+                }
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "char" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "char"){
+                yyerror("ERRO: Operadores relacionais não aceitam tipo char!");
+            }
+            }
+            if (operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "bool" || pilha[busca_escopo($3.label)][$3.label].tipo == "bool"){
+                    yyerror("Erro: operações aritiméticas não aceitam booleanos!");
+                }
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "string" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "string"){
+                    yyerror("ERRO: Operadores aritiméticos não aceitam tipo string!");
+                }
+                if(pilha[busca_escopo($1.label)][$1.label].tipo == "char" ||  pilha[busca_escopo($3.label)][$3.label].tipo == "char"){
+                    yyerror("ERRO: Operadores aritiméticos não aceitam tipo char!");
+                }
+            }
         }
     }
-    if(verificaVar($3.label)){
-        if (pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
-            yyerror("ERRO: Variável " + $3.label + " sem valor atribuido!");
+    // $1 e $3 não var
+    else{
+        if(operador == "||" || operador == "&&"){
+            if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" || pilha[busca_escopo($1.label)][$1.label].tipo == "float" || pilha[busca_escopo($1.label)][$1.label].tipo == "char" || pilha[busca_escopo($1.label)][$1.label].tipo == "string" || $3.tipo == "int" || $3.tipo == "float" || $3.tipo == "char" || $3.tipo == "string"){
+                yyerror("ERRO: Operadores Lógicos só aceitam tipo Booleano!");
+            }
         }
-    }
-    if(operador == "||" || operador == "&&"){
-        if($1.tipo == "int" || $1.tipo == "float" || $1.tipo == "char" || $3.tipo == "int" || $3.tipo == "float" || $3.tipo == "char"){
-            yyerror("ERRO: Operadores Lógicos só aceitam tipos Booleanos!");
+        if(operador == ">" || operador == "<" || operador == ">=" || operador == "<="){
+            if($1.tipo == "bool" ||  $3.tipo == "bool"){
+                yyerror("ERRO: Operadores relacionais não aceitam tipo Booleano!");
+            }
+            if($1.tipo == "string" ||  $3.tipo == "string"){
+                yyerror("ERRO: Operadores relacionais não aceitam tipo string!");
+            }
+            if($1.tipo == "char" ||  $3.tipo == "char"){
+                yyerror("ERRO: Operadores relacionais não aceitam tipo char!");
+            }
         }
-    }
-    if(operador == ">" || operador == "<" || operador == ">=" || operador == "<="){
-        if($1.tipo == "bool" ||  $3.tipo == "bool"){
-            yyerror("ERRO: Operadores Relacionais não aceitam tipos Booleanos!");
-        }
-    }
-    if (operador == "+" || operador == "-" || operador == "*" || operador == "/"){
-        if($1.tipo == "bool" || $3.tipo == "bool"){
-            yyerror("Erro: operações aritiméticas não aceitam booleanos!");
+        if (operador == "+" || operador == "-" || operador == "*" || operador == "/"){
+            if($1.tipo == "bool" || $3.tipo == "bool"){
+                yyerror("Erro: operações aritiméticas não aceitam booleanos!");
+            }
+            if($1.tipo == "string" ||  $3.tipo == "string"){
+                yyerror("ERRO: Operadores aritiméticos não aceitam tipo string!");
+            }
+            if($1.tipo == "char" ||  $3.tipo == "char"){
+                yyerror("ERRO: Operadores aritiméticos não aceitam tipo char!");
+            }
         }
     }
 

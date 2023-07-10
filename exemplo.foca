@@ -1,20 +1,10 @@
 int main(){ 
-    int i;
-    i = 10;
 
-    switch(i){
-        case 10:
-            int a;
-            a = 43;
-        default:
-            int b;
-            b = 5;
-    }
-    switch(i){
-        case 10:
-           i = 5472547;  
+    switch(2){
+        case 1:
+        int a;
+        case 3:
         
-        default:
-           i = 572574;
     }
+
 }

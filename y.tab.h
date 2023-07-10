@@ -64,26 +64,30 @@ extern int yydebug;
     TK_CASE = 270,
     TK_DP = 271,
     TK_DEFAULT = 272,
-    TK_MAIN = 273,
-    TK_ID = 274,
-    TK_TIPO_INT = 275,
-    TK_TIPO_FLOAT = 276,
-    TK_TIPO_BOOL = 277,
-    TK_CAST_FLOAT = 278,
-    TK_CAST_INT = 279,
-    TK_CAST_BOOL = 280,
-    TK_TIPO_CHAR = 281,
-    TK_TIPO_STRING = 282,
-    TK_FIM = 283,
-    TK_ERROR = 284,
-    AND = 285,
-    OR = 286,
-    NO = 287,
-    EQ = 288,
-    NE = 289,
-    GE = 290,
-    LE = 291,
-    TK_CAST_CHAR = 292
+    TK_PRINT = 273,
+    TK_SCAN = 274,
+    TK_BREAK = 275,
+    TK_CONTINUE = 276,
+    TK_MAIN = 277,
+    TK_ID = 278,
+    TK_TIPO_INT = 279,
+    TK_TIPO_FLOAT = 280,
+    TK_TIPO_BOOL = 281,
+    TK_CAST_FLOAT = 282,
+    TK_CAST_INT = 283,
+    TK_CAST_BOOL = 284,
+    TK_TIPO_CHAR = 285,
+    TK_TIPO_STRING = 286,
+    TK_FIM = 287,
+    TK_ERROR = 288,
+    AND = 289,
+    OR = 290,
+    NO = 291,
+    EQ = 292,
+    NE = 293,
+    GE = 294,
+    LE = 295,
+    TK_CAST_CHAR = 296
   };
 #endif
 /* Tokens.  */
@@ -102,26 +106,30 @@ extern int yydebug;
 #define TK_CASE 270
 #define TK_DP 271
 #define TK_DEFAULT 272
-#define TK_MAIN 273
-#define TK_ID 274
-#define TK_TIPO_INT 275
-#define TK_TIPO_FLOAT 276
-#define TK_TIPO_BOOL 277
-#define TK_CAST_FLOAT 278
-#define TK_CAST_INT 279
-#define TK_CAST_BOOL 280
-#define TK_TIPO_CHAR 281
-#define TK_TIPO_STRING 282
-#define TK_FIM 283
-#define TK_ERROR 284
-#define AND 285
-#define OR 286
-#define NO 287
-#define EQ 288
-#define NE 289
-#define GE 290
-#define LE 291
-#define TK_CAST_CHAR 292
+#define TK_PRINT 273
+#define TK_SCAN 274
+#define TK_BREAK 275
+#define TK_CONTINUE 276
+#define TK_MAIN 277
+#define TK_ID 278
+#define TK_TIPO_INT 279
+#define TK_TIPO_FLOAT 280
+#define TK_TIPO_BOOL 281
+#define TK_CAST_FLOAT 282
+#define TK_CAST_INT 283
+#define TK_CAST_BOOL 284
+#define TK_TIPO_CHAR 285
+#define TK_TIPO_STRING 286
+#define TK_FIM 287
+#define TK_ERROR 288
+#define AND 289
+#define OR 290
+#define NO 291
+#define EQ 292
+#define NE 293
+#define GE 294
+#define LE 295
+#define TK_CAST_CHAR 296
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED

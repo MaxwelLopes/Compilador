@@ -23,9 +23,17 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "main"		{return TK_MAIN;}
 
+"print"     {return TK_PRINT;}
+
+"scan"      {return TK_SCAN;}
+
+"break"     {return TK_BREAK;}
+
+"continue"  {return TK_CONTINUE;}
+
 "if"        {return TK_IF;}
 
-"else"      {return TK_ELSE;}
+"else"      {return TK_ELSE;}  
 
 "for"      {return TK_FOR;}
 
@@ -56,6 +64,8 @@ ID {LETRA}({LETRA}|{NUM})*
 "(int)"     {return TK_CAST_INT;}
 
 "(char)"    {return TK_CAST_CHAR;}
+
+
 
 
 [(){}[\];,]	{ return *yytext; }
