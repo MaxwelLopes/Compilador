@@ -1,10 +1,4 @@
 int main(){ 
-
-    switch(2){
-        case 1:
-        int a;
-        case 3:
-        
-    }
-
+    string a;
+    scanf()
 }

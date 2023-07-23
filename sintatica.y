@@ -757,6 +757,15 @@ E		   : E '>' E
                     if(pilha[busca_escopo($3.label)][$3.label].atribuido == 0){
                        yyerror("ERRO: Variável " + $3.label + " sem valor atribuido");
                     }
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" && pilha[busca_escopo($3.label)][$3.label].tipo == "string"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" && $3.tipo != "int"){
+                        yyerror("ERRO: Tipos difentes!");
+                    }
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo == "string" && pilha[busca_escopo($1.label)][$1.label].tipo != "string"){
+                    yyerror("ERRO: Tipos difentes!");
+                }
                     
                     if(pilha[busca_escopo($1.label)][$1.label].tipo == "float" && pilha[busca_escopo($3.label)][$3.label].tipo == "int"){
                         pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
@@ -802,7 +811,10 @@ E		   : E '>' E
                     }
                     if((pilha[busca_escopo($1.label)][$1.label].tipo == "string") && ($3.tipo != "string")){
                         yyerror("ERRO: Tipos difentes!");
-                    }       
+                    }    
+                    if($3.tipo == "string" && pilha[busca_escopo($1.label)][$1.label].tipo != "string"){
+                    yyerror("ERRO: Tipos difentes!");
+                }   
                     
                     
                     if(pilha[busca_escopo($1.label)][$1.label].tipo == "float" && $3.tipo == "int"){
@@ -876,8 +888,8 @@ E		   : E '>' E
             }
             | TK_STRING
             {
-                $$.tipo = "string";
                 $$.label = genTemp();
+                $$.tipo = "string";
                 $$.valor = $1.label;
                 $$.declaracao += "\t" + string("char") + " " + $$.label + string("[") +to_string($1.label.length()-1) +string("]")+ ";\n";
                 $$.traducao += "\t" + string("strcpy(") + $$.label + ", " + $1.label + ");\n";
