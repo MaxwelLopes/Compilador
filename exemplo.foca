@@ -1,6 +1,6 @@
 int main(){ 
 
-    string hugo;
-    hugo = "otario";
+    string luiz;
+    luiz = "legal";
 }
 
