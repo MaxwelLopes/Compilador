@@ -69,7 +69,6 @@ int tempRot;
 bool bloco_switch = false;
 bool defaultExecutado = false;
 string auxPrint;
-extern int contn;
 
 int yylex(void);
 void yyerror(string);
@@ -1839,7 +1838,7 @@ int main( int argc, char* argv[] )
 
 void yyerror( string MSG )
 {
-	cout << "Linha " + to_string(contn) + " -> " + MSG << endl;
+	cout << MSG << endl;
     //cout << MSG << endl;
 	exit (0);
 }

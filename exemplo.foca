@@ -1,6 +1,8 @@
 int main(){ 
 
-    string luiz;
-    luiz = "legal";
+    int i;
+    for(i=0; i<50; i = i + 1){
+        i = i + 1;
+    }
 }
 
