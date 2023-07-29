@@ -2,9 +2,7 @@
 
 int main(){
 
-    int i=10;
-
-    printf("Hugo é gay!");
+    nreal
 
 
     return 0;

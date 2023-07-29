@@ -1,6 +1,6 @@
 %{
 #include <string>
-int contn = 0;
+int contn = 1;
 %}
 
 ESPACO [ \t] 
@@ -15,7 +15,10 @@ STRING \"([^\"\n])*\"
 ID {LETRA}({LETRA}|{NUM})*
 
 
+
+
 %%
+"//"(.*)  {return TK_COMENT; }/* Ignorar comentários de linha única */
 
 "\n"		{}
 
@@ -57,7 +60,11 @@ ID {LETRA}({LETRA}|{NUM})*
 
 "bool"      {return TK_TIPO_BOOL;}
 
+"void"      {return TK_TIPO_VOID;}
+
 "string"    {return TK_TIPO_STRING;}
+
+"return"    {return TK_RETURN;}
 
 "(float)"   {return TK_CAST_FLOAT;}
 
@@ -89,7 +96,8 @@ ID {LETRA}({LETRA}|{NUM})*
 {CHAR}      { yylval.label = yytext; return TK_CHAR; }
 {STRING}    { yylval.label = yytext; return TK_STRING; }
 
-[\n] {contn++;}
-.			{ *yytext; }
+.\n         {contn++;}
+.			{ *yytext;}
+
 
 %%

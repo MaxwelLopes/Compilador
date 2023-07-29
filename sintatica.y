@@ -39,14 +39,29 @@ typedef struct
     string tipo;
 	string temp;
     string valor;
+    string tamMatriz;
+    bool vetor;
+    bool matriz;
+    int tam;
     int atribuido;
     int bloco;
 } TIPO_SIMBOLO;
 
+typedef struct
+{
+    string nome;
+    string tipo;
+	string temp;
+    string retorno;
+    string traducao;
+} FUNCAO;
+
 int bloco_atual = -1;
 vector<unordered_map<string, TIPO_SIMBOLO>> pilha; 
+vector<unordered_map<string, FUNCAO>> funcao; 
 vector<tuple<string, string>> pilha_rotulo;
 bool gerouRotulo = false;
+bool loop = false;
 
 vector<string> pilha_malloc;
 int temp;
@@ -54,12 +69,13 @@ int tempRot;
 bool bloco_switch = false;
 bool defaultExecutado = false;
 string auxPrint;
+extern int contn;
 
 int yylex(void);
 void yyerror(string);
 %}
 
-%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR TK_STRING TK_IF TK_ELSE TK_FOR TK_WHILE TK_DO TK_SWITCH TK_CASE TK_DP TK_DEFAULT TK_PRINT TK_SCAN TK_BREAK TK_CONTINUE
+%token TK_NUM TK_REAL TK_TRUE TK_FALSE TK_CHAR TK_STRING TK_IF TK_ELSE TK_FOR TK_WHILE TK_DO TK_SWITCH TK_CASE TK_DP TK_DEFAULT TK_PRINT TK_SCAN TK_BREAK TK_CONTINUE TK_RETURN TK_TIPO_VOID TK_QB TK_COMENT
 %token TK_MAIN TK_ID TK_TIPO_INT TK_TIPO_FLOAT TK_TIPO_BOOL TK_CAST_FLOAT TK_CAST_INT TK_CAST_BOOL TK_TIPO_CHAR TK_TIPO_STRING
 %token TK_FIM TK_ERROR 
 
@@ -71,7 +87,6 @@ void yyerror(string);
 %left '+' '-'
 %left '*' '/'
 %right '{'
-%right TK_BREAK
 
 %nonassoc TK_CAST_FLOAT 
 %nonassoc TK_CAST_INT 
@@ -80,11 +95,74 @@ void yyerror(string);
 
 %%
 
-S           : TK_TIPO_INT TK_MAIN '(' ')' BLOCO
+S           : TK_TIPO_INT TK_MAIN '(' ')' BLOCO GLOBAL
             {
                 cout << "/*Compilador CAPY*/\n" << "#include <iostream>\n#include<string.h>\n#include<stdio.h>\nint main(void)\n{\n" << $5.declaracao << $5.traducao << "\treturn 0;\n}" << endl;
             }
-            |
+            ;
+
+GLOBAL  : TIPO TK_ID '(' PARAMETROS ')' BLOCO
+        {
+            //declarado($2.label);
+            pilha.push_back(unordered_map<string, TIPO_SIMBOLO>());
+            FUNCAO fun;
+            fun.nome = $2.label;
+            fun.tipo = $1.label;
+            fun.traducao = $6.traducao;
+        }
+        |
+        {
+
+        }
+
+TIPO    : TK_TIPO_INT
+        {
+            $$.label = "int";
+        }
+        | TK_TIPO_FLOAT
+        {
+            $$.label = "float";
+        }
+        | TK_TIPO_CHAR
+        {
+            $$.label = "char";
+        }
+        | TK_TIPO_BOOL
+        {
+            $$.label = "bool";
+        }
+        | TK_TIPO_STRING
+        {
+            $$.label = "string";
+        }
+        | TK_TIPO_VOID
+        {
+            $$.label = "void";
+        } 
+        ;
+
+
+
+PARAMETROS: TIPO TK_ID
+            {
+                // if(pilha_funcao.empty()){
+                //     pilha_funcao.push_back(unordered_map<string, TIPO_SIMBOLO>());
+                // }
+                // TIPO_SIMBOLO var;
+                // var.tipo = $1.label;
+                // var.nome = $2.label;
+                // var.temp = genTemp();
+            }
+            |TIPO TK_ID ',' PARAMETROS
+            {
+                // if(pilha_funcao.empty()){
+                //     pilha_funcao.push_back(unordered_map<string, TIPO_SIMBOLO>());
+                // }
+                // TIPO_SIMBOLO var;
+                // var.tipo = $1.label;
+                // var.nome = $2.label;
+                // var.temp = genTemp();
+            }
             ;
 
 BLOCO       : '{' INI COMANDOS FIM '}'
@@ -180,7 +258,7 @@ COMANDO     : BLOCO
                 var.bloco = bloco_atual;
                 pilha[bloco_atual][var.nome] = var;
                 $$.tipo = var.tipo;
-                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
+                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";\n";
                 $$.traducao = "";
             }
             | TK_TIPO_FLOAT TK_ID';'
@@ -194,7 +272,7 @@ COMANDO     : BLOCO
                 var.bloco = bloco_atual;
                 pilha[bloco_atual][var.nome] = var;
                 $$.tipo = var.tipo;
-                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
+                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";\n";
                 $$.traducao = "";
                 
             }
@@ -209,7 +287,7 @@ COMANDO     : BLOCO
                 var.bloco = bloco_atual;
                 pilha[bloco_atual][var.nome] = var;
                 $$.tipo = var.tipo;
-                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
+                $$.declaracao = "\t" + $$.tipo + " " + var.temp + ";\n";
                 $$.traducao = "";
             }
 			| TK_TIPO_BOOL TK_ID ';'
@@ -223,7 +301,7 @@ COMANDO     : BLOCO
                 var.bloco = bloco_atual;
                 pilha[bloco_atual][var.nome] = var;
                 $$.tipo = var.tipo;
-                $$.declaracao = "\t" + string("int") + " " + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
+                $$.declaracao = "\t" + string("int") + " " + var.temp + ";\n";
                 $$.traducao = "";
             } 
             | TK_TIPO_STRING TK_ID ';'
@@ -237,8 +315,422 @@ COMANDO     : BLOCO
                 var.bloco = bloco_atual;
                 pilha[bloco_atual][var.nome] = var;
                 $$.tipo = var.tipo;
-                $$.declaracao = "\t" + string("char") + " *" + var.temp + ";    " + var.temp + " = " + var.nome + " bloco " + to_string(bloco_atual) +"\n";
+                $$.declaracao = "\t" + string("char") + " *" + var.temp + ";\n";
                 $$.traducao += "";
+            }
+            |TK_TIPO_INT TK_ID '[' E ']' ';'
+            {
+                declarado($2.label);
+                if(verificaVar($4.label)){
+                    if(pilha[busca_escopo($4.label)][$4.label].tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    if(pilha[busca_escopo($4.label)][$4.label].tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.label = genTemp();
+                    TIPO_SIMBOLO vet;
+                    vet.nome = $2.label;
+                    vet.tipo = "int";
+                    vet.atribuido = 1;
+                    vet.temp = $$.label;
+                    vet.vetor = true;
+                    vet.bloco = bloco_atual;
+                    pilha[bloco_atual][vet.nome] = vet;
+                    $$.tipo = vet.tipo;
+                    $$.declaracao = $4.declaracao;
+                    $$.traducao = $4.traducao + "\t" + $$.tipo + " " + $$.label + '[' + pilha[busca_escopo($4.label)][$4.label].temp + "];\n";
+                }
+                else{
+                    if($4.tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    if(stoi($4.valor) < 0){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.label = genTemp();
+                    TIPO_SIMBOLO vet;
+                    vet.nome = $2.label;
+                    vet.tipo = "int";
+                    vet.atribuido = 1;
+                    vet.temp = $$.label;
+                    vet.tam = stoi($4.valor);
+                    vet.vetor = true;
+                    vet.bloco = bloco_atual;
+                    pilha[bloco_atual][vet.nome] = vet;
+                    $$.tipo = vet.tipo;
+                    $$.declaracao = $4.declaracao;
+                    $$.traducao = $4.traducao + "\t" + $$.tipo + " " + $$.label + '[' + $4.label + "];\n";
+                }
+            }
+            |TK_TIPO_FLOAT TK_ID '[' E ']' ';'
+            {
+                declarado($2.label);
+                if(verificaVar($4.label)){
+                    if(pilha[busca_escopo($4.label)][$4.label].tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    if(pilha[busca_escopo($4.label)][$4.label].tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.label = genTemp();
+                    TIPO_SIMBOLO vet;
+                    vet.nome = $2.label;
+                    vet.tipo = "float";
+                    vet.atribuido = 1;
+                    vet.temp = $$.label;
+                    vet.vetor = true;
+                    vet.bloco = bloco_atual;
+                    pilha[bloco_atual][vet.nome] = vet;
+                    $$.tipo = vet.tipo;
+                    $$.declaracao = $4.declaracao;
+                    $$.traducao = $4.traducao + "\t" + $$.tipo + " " + $$.label + '[' + pilha[busca_escopo($4.label)][$4.label].temp + "];\n";
+                }
+                else{
+                    if($4.tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.label = genTemp();
+                    TIPO_SIMBOLO vet;
+                    vet.nome = $2.label;
+                    vet.tipo = "float";
+                    vet.atribuido = 1;
+                    vet.temp = $$.label;
+                    vet.vetor = true;
+                    vet.bloco = bloco_atual;
+                    pilha[bloco_atual][vet.nome] = vet;
+                    $$.tipo = vet.tipo;
+                    $$.declaracao = $4.declaracao;
+                    $$.traducao = $4.traducao + "\t" + $$.tipo + " " + $$.label + '[' + $4.label + "];\n";
+                }
+            }
+            | TK_ID '=' TK_ID '[' E ']' ';'
+            {
+                if(verificaVar($5.label)){
+                    if(pilha[busca_escopo($5.label)][$5.label].tipo != "int"){
+                        yyerror("Erro: Posição do Vetor Inválida");
+                    }
+                    $$.declaracao = $5.declaracao;
+                    $$.traducao = $5.traducao;
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo == "float" && pilha[busca_escopo($1.label)][$1.label].tipo == "int"){
+                        $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = (int)" + pilha[busca_escopo($3.label)][$3.label].temp + '[' + pilha[busca_escopo($5.label)][$5.label].temp + "];\n";
+                    }
+                    else if(pilha[busca_escopo($3.label)][$3.label].tipo == "int" && pilha[busca_escopo($1.label)][$1.label].tipo == "float"){
+                        $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = (float)" + pilha[busca_escopo($3.label)][$3.label].temp + '[' + pilha[busca_escopo($5.label)][$5.label].temp + "];\n";
+                    }
+                    else{
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + pilha[busca_escopo($3.label)][$3.label].temp + "[" + pilha[busca_escopo($5.label)][$5.label].temp + "];\n";
+                    }
+                }
+                else{
+                    if($5.tipo != "int"){
+                        yyerror("Erro: Posição do Vetor Inválida");
+                    }
+                    $$.declaracao = $5.declaracao;
+                    $$.traducao = $5.traducao;
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo == "float" && pilha[busca_escopo($1.label)][$1.label].tipo == "int"){
+                        $$.label = genTemp();
+                        $$.traducao += "\t" + $$.label + " = (int)" + pilha[busca_escopo($3.label)][$3.label].temp + '[' + $5.label + "];\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $$.label + ";\n";
+                    }
+                    else if(pilha[busca_escopo($3.label)][$3.label].tipo == "int" && pilha[busca_escopo($1.label)][$1.label].tipo == "float"){
+                        $$.label = genTemp();
+                        $$.traducao += + "\t" + $$.label + " = (float)" + pilha[busca_escopo($3.label)][$3.label].temp + '[' + $5.label + "];\n";
+                        $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + $$.label + ";\n";
+                    }
+                    else{
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + pilha[busca_escopo($3.label)][$3.label].temp + '[' + $5.label + "];\n";
+                    }
+                }            
+            }
+            |TK_ID '[' E ']' '=' E ';'
+            {
+                if(verificaVar($3.label) && verificaVar($6.label)){
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo != "int"){
+                        yyerror("Erro: Posição do Vetor Inválida");
+                    }
+                    $$.declaracao = $3.declaracao + $6.declaracao;
+                    $$.traducao = $3.traducao + $6.traducao;
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo == "float" && pilha[busca_escopo($6.label)][$6.label].tipo == "int"){
+                        $$.traducao = "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + pilha[busca_escopo($3.label)][$3.label].temp + "]" + " = (int)" + pilha[busca_escopo($6.label)][$6.label].temp + ";\n";
+                    }
+                    else if(pilha[busca_escopo($3.label)][$3.label].tipo == "int" && pilha[busca_escopo($6.label)][$6.label].tipo == "float"){
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + pilha[busca_escopo($3.label)][$3.label].temp + "]" + " = (int)" + pilha[busca_escopo($6.label)][$6.label].temp + ";\n";
+                    }
+                    else{
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + pilha[busca_escopo($3.label)][$3.label].temp + "]" + " = " + pilha[busca_escopo($6.label)][$6.label].temp + ";\n";
+                    }
+                }
+                if(!verificaVar($3.label) && !verificaVar($6.label)){
+                    if($3.tipo != "int"){
+                        yyerror("Erro: Posição do Vetor Inválida");
+                    }
+                    $$.declaracao = $3.declaracao + $6.declaracao;
+                    $$.traducao = $3.traducao + $6.traducao;
+                    if($3.tipo == "float" && $6.tipo == "int"){
+                        $$.traducao = "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + $3.label + "]" + " = (float)" + $6.label + ";\n";
+                    }
+                    else if($3.tipo == "int" && $6.tipo == "float"){
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + $3.label + "]" + " = (int)" + $6.label + ";\n";
+                    }
+                    else{
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + $3.label + "]" + " = " + $6.label + ";\n";
+                    }
+                }
+                if(!verificaVar($3.label) && verificaVar($6.label)){
+                    if($3.tipo != "int"){
+                        yyerror("Erro: Posição do Vetor Inválida");
+                    }
+                    $$.declaracao = $3.declaracao + $6.declaracao;
+                    $$.traducao = $3.traducao + $6.traducao;
+                    if($3.tipo == "float" && pilha[busca_escopo($6.label)][$6.label].tipo == "int"){
+                        $$.traducao = "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + $3.label + "]" + " = (float)" + pilha[busca_escopo($6.label)][$6.label].temp + ";\n";
+                    }
+                    else if($3.tipo == "int" && pilha[busca_escopo($6.label)][$6.label].tipo == "float"){
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + $3.label + "]" + " = (int)" + pilha[busca_escopo($6.label)][$6.label].temp + "];\n";
+                    }
+                    else{
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + $3.label + "]" + " = " + pilha[busca_escopo($6.label)][$6.label].temp + ";\n";
+                    }
+                }
+                if(verificaVar($3.label) && !verificaVar($6.label)){
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo != "int"){
+                        yyerror("Erro: Posição do Vetor Inválida");
+                    }
+                    $$.declaracao = $3.declaracao + $6.declaracao;
+                    $$.traducao = $3.traducao + $6.traducao;
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo == "float" && $6.tipo == "int"){
+                        $$.traducao = "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + pilha[busca_escopo($3.label)][$3.label].temp + "]" + " = (float)" + $6.label + ";\n";
+                    }
+                    else if(pilha[busca_escopo($3.label)][$3.label].tipo == "int" && $6.tipo == "float"){
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + pilha[busca_escopo($3.label)][$3.label].temp + "]" + " = (int)" + $6.label + ";\n";
+                    }
+                    else{
+                        $$.traducao += + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + "[" + pilha[busca_escopo($3.label)][$3.label].temp + "]" + " = " + $6.label + ";\n";
+                    }
+                }                
+            }
+            | TK_RETURN E ';'
+            {
+
+            }
+            | TK_COMENT
+            {
+                
+            }
+            | TK_TIPO_INT TK_ID '[' E ']' '[' E ']' ';'
+            {
+                if(!verificaVar($4.label) && !verificaVar($7.label)){
+                    if($4.tipo != "int" || $7.tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.declaracao = $4.declaracao + $7.declaracao;
+                    $$.traducao = $4.traducao + $7.traducao;
+                    $$.label = genTemp();
+                    $$.declaracao += "\tint " + $$.label + ";\n";
+                    $$.traducao += "\t" + $$.label + " = " + $4.label + " * " + $7.label + ";\n";
+                    string temp = $$.label;
+                    TIPO_SIMBOLO matriz;
+                    $$.label = genTemp();
+                    matriz.nome = $2.label;
+                    matriz.tipo = "int";
+                    matriz.atribuido = 1;
+                    matriz.temp = $$.label;
+                    matriz.tamMatriz = temp;
+                    matriz.matriz = true;
+                    matriz.bloco = bloco_atual;
+                    pilha[bloco_atual][matriz.nome] = matriz;
+                    $$.tipo = matriz.tipo;
+                    $$.traducao += "\t" + $$.tipo + " " + $$.label + '[' + temp + "];\n";
+                }
+                if(verificaVar($4.label) && verificaVar($7.label)){
+                    if(pilha[busca_escopo($4.label)][$4.label].tipo != "int" || pilha[busca_escopo($7.label)][$7.label].tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.declaracao = $4.declaracao + $7.declaracao;
+                    $$.traducao = $4.traducao + $7.traducao;
+                    $$.label = genTemp();
+                    $$.declaracao += "\tint " + $$.label + ";\n";
+                    $$.traducao += "\t" + $$.label + " = " + pilha[busca_escopo($4.label)][$4.label].temp + " * " + pilha[busca_escopo($7.label)][$7.label].temp + ";\n";
+                    string temp = $$.label;
+                    TIPO_SIMBOLO matriz;
+                    $$.label = genTemp();
+                    matriz.nome = $2.label;
+                    matriz.tipo = "int";
+                    matriz.atribuido = 1;
+                    matriz.temp = $$.label;
+                    matriz.tamMatriz = temp;
+                    matriz.matriz = true;
+                    matriz.bloco = bloco_atual;
+                    pilha[bloco_atual][matriz.nome] = matriz;
+                    $$.tipo = matriz.tipo;
+                    $$.traducao += "\t" + $$.tipo + " " + $$.label + '[' + temp + "];\n";
+                }
+                if(!verificaVar($4.label) && verificaVar($7.label)){
+                    if($4.tipo != "int" || pilha[busca_escopo($7.label)][$7.label].tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.declaracao = $4.declaracao + $7.declaracao;
+                    $$.traducao = $4.traducao + $7.traducao;
+                    $$.label = genTemp();
+                    $$.declaracao += "\tint " + $$.label + ";\n";
+                    $$.traducao += "\t" + $$.label + " = " + $4.label + " * " + pilha[busca_escopo($7.label)][$7.label].temp + ";\n";
+                    string temp = $$.label;
+                    TIPO_SIMBOLO matriz;
+                    $$.label = genTemp();
+                    matriz.nome = $2.label;
+                    matriz.tipo = "int";
+                    matriz.atribuido = 1;
+                    matriz.temp = $$.label;
+                    matriz.tamMatriz = temp;
+                    matriz.matriz = true;
+                    matriz.bloco = bloco_atual;
+                    pilha[bloco_atual][matriz.nome] = matriz;
+                    $$.tipo = matriz.tipo;
+                    $$.traducao += "\t" + $$.tipo + " " + $$.label + '[' + temp + "];\n";
+                }
+                if(verificaVar($4.label) && !verificaVar($7.label)){
+                    if(pilha[busca_escopo($4.label)][$4.label].tipo != "int" || $7.tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.declaracao = $4.declaracao + $7.declaracao;
+                    $$.traducao = $4.traducao + $7.traducao;
+                    $$.label = genTemp();
+                    $$.declaracao += "\tint " + $$.label + ";\n";
+                    $$.traducao += "\t" + $$.label + " = " + pilha[busca_escopo($4.label)][$4.label].temp + " * " + $7.label + ";\n";
+                    string temp = $$.label;
+                    TIPO_SIMBOLO matriz;
+                    $$.label = genTemp();
+                    matriz.nome = $2.label;
+                    matriz.tipo = "int";
+                    matriz.atribuido = 1;
+                    matriz.temp = $$.label;
+                    matriz.tamMatriz = temp;
+                    matriz.matriz = true;
+                    matriz.bloco = bloco_atual;
+                    pilha[bloco_atual][matriz.nome] = matriz;
+                    $$.tipo = matriz.tipo;
+                    $$.traducao += "\t" + $$.tipo + " " + $$.label + '[' + temp + "];\n";
+                }
+            }
+            | TK_TIPO_FLOAT TK_ID '[' E ']' '[' E ']' ';'
+            {
+                if(!verificaVar($4.label) && !verificaVar($7.label)){
+                    if($4.tipo != "int" || $7.tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.declaracao = $4.declaracao + $7.declaracao;
+                    $$.traducao = $4.traducao + $7.traducao;
+                    $$.label = genTemp();
+                    $$.declaracao += "\tint " + $$.label + ";\n";
+                    $$.traducao += "\t" + $$.label + " = " + $4.label + " * " + $7.label + ";\n";
+                    string temp = $$.label;
+                    TIPO_SIMBOLO matriz;
+                    $$.label = genTemp();
+                    matriz.nome = $2.label;
+                    matriz.tipo = "float";
+                    matriz.atribuido = 1;
+                    matriz.temp = $$.label;
+                    matriz.tamMatriz = temp;
+                    matriz.matriz = true;
+                    matriz.bloco = bloco_atual;
+                    pilha[bloco_atual][matriz.nome] = matriz;
+                    $$.tipo = matriz.tipo;
+                    $$.traducao += "\t" + $$.tipo + " " + $$.label + '[' + temp + "];\n";
+                }
+                if(verificaVar($4.label) && verificaVar($7.label)){
+                    if(pilha[busca_escopo($4.label)][$4.label].tipo != "int" || pilha[busca_escopo($7.label)][$7.label].tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.declaracao = $4.declaracao + $7.declaracao;
+                    $$.traducao = $4.traducao + $7.traducao;
+                    $$.label = genTemp();
+                    $$.declaracao += "\tint " + $$.label + ";\n";
+                    $$.traducao += "\t" + $$.label + " = " + pilha[busca_escopo($4.label)][$4.label].temp + " * " + pilha[busca_escopo($7.label)][$7.label].temp + ";\n";
+                    string temp = $$.label;
+                    TIPO_SIMBOLO matriz;
+                    $$.label = genTemp();
+                    matriz.nome = $2.label;
+                    matriz.tipo = "float";
+                    matriz.atribuido = 1;
+                    matriz.temp = $$.label;
+                    matriz.tamMatriz = temp;
+                    matriz.matriz = true;
+                    matriz.bloco = bloco_atual;
+                    pilha[bloco_atual][matriz.nome] = matriz;
+                    $$.tipo = matriz.tipo;
+                    $$.traducao += "\t" + $$.tipo + " " + $$.label + '[' + temp + "];\n";
+                }
+                if(!verificaVar($4.label) && verificaVar($7.label)){
+                    if($4.tipo != "int" || pilha[busca_escopo($7.label)][$7.label].tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.declaracao = $4.declaracao + $7.declaracao;
+                    $$.traducao = $4.traducao + $7.traducao;
+                    $$.label = genTemp();
+                    $$.declaracao += "\tint " + $$.label + ";\n";
+                    $$.traducao += "\t" + $$.label + " = " + $4.label + " * " + pilha[busca_escopo($7.label)][$7.label].temp + ";\n";
+                    string temp = $$.label;
+                    TIPO_SIMBOLO matriz;
+                    $$.label = genTemp();
+                    matriz.nome = $2.label;
+                    matriz.tipo = "float";
+                    matriz.atribuido = 1;
+                    matriz.temp = $$.label;
+                    matriz.tamMatriz = temp;
+                    matriz.matriz = true;
+                    matriz.bloco = bloco_atual;
+                    pilha[bloco_atual][matriz.nome] = matriz;
+                    $$.tipo = matriz.tipo;
+                    $$.traducao += "\t" + $$.tipo + " " + $$.label + '[' + temp + "];\n";
+                }
+                if(verificaVar($4.label) && !verificaVar($7.label)){
+                    if(pilha[busca_escopo($4.label)][$4.label].tipo != "int" || $7.tipo != "int"){
+                        yyerror("Erro: Tamanho do Vetor Inválido");
+                    }
+                    $$.declaracao = $4.declaracao + $7.declaracao;
+                    $$.traducao = $4.traducao + $7.traducao;
+                    $$.label = genTemp();
+                    $$.declaracao += "\tint " + $$.label + ";\n";
+                    $$.traducao += "\t" + $$.label + " = " + pilha[busca_escopo($4.label)][$4.label].temp + " * " + $7.label + ";\n";
+                    string temp = $$.label;
+                    TIPO_SIMBOLO matriz;
+                    $$.label = genTemp();
+                    matriz.nome = $2.label;
+                    matriz.tipo = "float";
+                    matriz.atribuido = 1;
+                    matriz.temp = $$.label;
+                    matriz.tamMatriz = temp;
+                    matriz.matriz = true;
+                    matriz.bloco = bloco_atual;
+                    pilha[bloco_atual][matriz.nome] = matriz;
+                    $$.tipo = matriz.tipo;
+                    $$.traducao += "\t" + $$.tipo + " " + $$.label + '[' + temp + "];\n";
+                }
+            }
+            |TK_ID '[' E ']' '[' E ']' '=' E ';'
+            {
+                if(!verificaVar($3.label) && !verificaVar($6.label)){
+                    if($3.tipo != "int" || $6.tipo != "int"){
+                        yyerror("Erro: Posição da matriz Inválida");
+                    }
+                }
+                if(verificaVar($3.label) && verificaVar($6.label)){
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo != "int" || pilha[busca_escopo($6.label)][$6.label].tipo != "int"){
+                        yyerror("Erro: Posição da matriz Inválida");
+                    }
+                }
+                if(!verificaVar($3.label) && verificaVar($6.label)){
+                    if($3.tipo != "int" || pilha[busca_escopo($6.label)][$6.label].tipo != "int"){
+                        yyerror("Erro: Posição da matriz Inválida");
+                    }
+                }
+                if(verificaVar($3.label) && !verificaVar($6.label)){
+                    if(pilha[busca_escopo($3.label)][$3.label].tipo != "int" || $6.tipo != "int"){
+                        yyerror("Erro: Posição da matriz Inválida");
+                    }
+                }
+                
             }
             ;
 
@@ -253,10 +745,11 @@ IF          : TK_IF '(' E ')' BLOCO
                     }
                     else{
                         $$.label = genTemp();
+                        string rotulo = genRot();
                         $$.declaracao = "\tint " + $$.label + ";\n";
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_IF" + ";\n";
-                        $$.traducao += $5.traducao + "\tFIM_IF;\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotulo + ";\n";
+                        $$.traducao += $5.traducao + "\t" + rotulo + ":\n";
                         $$.declaracao += $3.declaracao + $5.declaracao + "\tint " + $$.label + ";\n";
                     }
                 }
@@ -266,9 +759,10 @@ IF          : TK_IF '(' E ')' BLOCO
                     }
                     else{
                         $$.label = genTemp();
+                        string rotulo = genRot();
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_IF" + ";\n";
-                        $$.traducao += $5.traducao + "\tFIM_IF;\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotulo + ";\n";
+                        $$.traducao += $5.traducao + "\t" + rotulo + ":\n";
                         $$.declaracao += $3.declaracao + $5.declaracao + "\tint " + $$.label + ";\n";
                     }
                 }
@@ -284,12 +778,17 @@ IF_ELSE     : TK_IF '(' E ')' BLOCO TK_ELSE BLOCO
                        yyerror("ERRO: Variável " + $3.label + " sem valor atribuido");
                     }
                     else{
+                        string rotulo1 = genRot();
+                        string rotulo2 = genRot();
                         $$.label = genTemp();
                         $$.declaracao = "\tint " + $$.label + ";\n";
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " FIM_IF" + ";\n";
-                        $$.traducao += $5.traducao + "\tFIM_IF;\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotulo1 + ";\n";
+                        $$.traducao += $5.traducao + "\tgoto " + rotulo2 + ";\n";
+                        //else
                         $$.declaracao += $3.declaracao + $5.declaracao + "\tint " + $$.label + ";\n";
+                        $$.declaracao += $7.declaracao;
+                        $$.traducao += "\t" + rotulo1 + "\n" + $7.traducao + "\t" + rotulo2 + ":\n";
                     }
                 }
                 else{
@@ -297,18 +796,19 @@ IF_ELSE     : TK_IF '(' E ')' BLOCO TK_ELSE BLOCO
                         yyerror("Erro: A condição do 'if' deve ser uma expressão booleana válida");
                     }
                     else{
+                        string rotulo1 = genRot();
+                        string rotulo2 = genRot();
                         $$.label = genTemp();
                         $$.declaracao = "\tint " + $$.label + ";\n";
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto" + " else" + ";\n";
-                        $$.traducao += $5.traducao + "\tFIM_IF" + " goto" + " FIM_ELSE" + ";\n"; 
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + rotulo1 + ";\n";
+                        $$.traducao += $5.traducao + "\tgoto " + rotulo2 + ";\n";
+                        //else
                         $$.declaracao += $3.declaracao + $5.declaracao + "\tint " + $$.label + ";\n";
+                        $$.declaracao += $7.declaracao;
+                        $$.traducao += "\t" + rotulo1 + "\n" + $7.traducao + "\t" + rotulo2 + "\n";
                     }
                 }
-
-                // Adiciona a tradução e declaração do bloco do else
-                $$.traducao += "\telse\n" + $7.traducao + "\tFIM_ELSE;\n";
-                $$.declaracao += $7.declaracao;
             }
             ;
 
@@ -327,12 +827,12 @@ FOR         : TK_FOR '(' E ';' E ';' E ')' BLOCO_LOOP
                         pilha_rotulo.pop_back();
                         gerouRotulo = false;
                         $$.label = genTemp(); 
-                        $$.traducao += $3.traducao + "\t" +iniRotulo + "\n" + $5.traducao; 
+                        $$.traducao += $3.traducao + "\t" +iniRotulo + ":\n" + $5.traducao; 
                         $$.traducao += "\t" + $$.label + " = " + "!" + pilha[busca_escopo($5.label)][$5.label].temp + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + "\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
                         $$.declaracao += $3.declaracao + $5.declaracao + $7.declaracao + $9.declaracao + "\tint " + $$.label + ";\n";
                         $$.traducao +=  $9.traducao + $7.traducao ;
-                        $$.traducao += "\t" + fimRotulo;  
+                        $$.traducao += "\t" + fimRotulo +":\n";  
                     }
                 }
                 else{
@@ -344,17 +844,17 @@ FOR         : TK_FOR '(' E ';' E ';' E ')' BLOCO_LOOP
                         string fimRotulo = get<1>(pilha_rotulo.back());
                         pilha_rotulo.pop_back();
                         $$.label = genTemp(); 
-                        $$.traducao += $3.traducao + "\t" + iniRotulo + "\n" + $5.traducao;
+                        $$.traducao += $3.traducao + "\t" + iniRotulo + ":\n" + $5.traducao;
                         $$.traducao += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
-                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + "\n";
+                        $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
                         $$.declaracao += $3.declaracao + $5.declaracao + $7.declaracao + $9.declaracao + "\tint " + $$.label + ";\n";
                         $$.traducao +=  $9.traducao + $7.traducao ;
-                        $$.traducao += string("\tgoto ") + iniRotulo + "\n\t" + fimRotulo + "\n";
+                        $$.traducao += string("\tgoto ") + iniRotulo + ";\n\t" + fimRotulo + ":\n";
                     }
                 }
-                gerouRotulo = false;
             }
             ;
+
 
 WHILE       : TK_WHILE '(' E ')' BLOCO_LOOP
             {
@@ -370,12 +870,12 @@ WHILE       : TK_WHILE '(' E ')' BLOCO_LOOP
                         string fimRotulo = get<1>(pilha_rotulo.back());
                         pilha_rotulo.pop_back();
                         gerouRotulo = false;
-                        $$.traducao += "\t" + iniRotulo + "\n";
+                        $$.traducao += "\t" + iniRotulo + ":\n";
                         $$.label = genTemp();
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
                         $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
-                        $$.traducao += $5.traducao + "\tgoto " + iniRotulo +"\n";
-                        $$.traducao += "\t" + fimRotulo + "\n";
+                        $$.traducao += $5.traducao + "\tgoto " + iniRotulo +";\n";
+                        $$.traducao += "\t" + fimRotulo + ":\n";
                         $$.declaracao += $3.declaracao + $5.declaracao;
                     }
                 }
@@ -388,12 +888,12 @@ WHILE       : TK_WHILE '(' E ')' BLOCO_LOOP
                         string fimRotulo = get<1>(pilha_rotulo.back());
                         pilha_rotulo.pop_back();
                         gerouRotulo = false;
-                        $$.traducao += "\t" + iniRotulo + "\n";
+                        $$.traducao += "\t" + iniRotulo + ":\n";
                         $$.label = genTemp();
                         $$.traducao += $3.traducao + "\t" + $$.label + " = " + "!" + $3.label + ";\n";
                         $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
-                        $$.traducao += $5.traducao + "\tgoto " + iniRotulo +"\n";
-                        $$.traducao += "\t" + fimRotulo + "\n";
+                        $$.traducao += $5.traducao + "\tgoto " + iniRotulo +";\n";
+                        $$.traducao += "\t" + fimRotulo + ":\n";
                         $$.declaracao += $3.declaracao + $5.declaracao;
                     }
                 }
@@ -414,13 +914,13 @@ DO_WHILE    : TK_DO BLOCO_LOOP TK_WHILE '(' E ')' ';'
                         string iniRotulo = get<0>(pilha_rotulo.back());
                         string fimRotulo = get<1>(pilha_rotulo.back());
                         pilha_rotulo.pop_back();
-                        $$.traducao += "\t" + iniRotulo + "\n";
+                        $$.traducao += "\t" + iniRotulo + ":\n";
                         $$.declaracao += $2.declaracao + $5.declaracao;
                         $$.traducao += $2.traducao + $5.traducao;
                         $$.label = genTemp();
                         $$.traducao += "\t" + $$.label + " = " + "!" + pilha[busca_escopo($5.label)][$5.label].temp + ";\n";
                         $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
-                        $$.traducao += "\t"+ iniRotulo +"\n";
+                        $$.traducao += "\t"+ iniRotulo +":\n";
                     }
                 }
                 else{
@@ -437,12 +937,14 @@ DO_WHILE    : TK_DO BLOCO_LOOP TK_WHILE '(' E ')' ';'
                         $$.label = genTemp();
                         $$.traducao += "\t" + $$.label + " = " + "!" + $5.label + ";\n";
                         $$.traducao += "\tif("+ $$.label + ")" + " goto " + fimRotulo + ";\n";
-                        $$.traducao += "\t"+ iniRotulo +"\n";
+                        $$.traducao += "\t"+ iniRotulo +":\n";
                     }
                 }
                 gerouRotulo = false;
             }
             ;
+
+
 
 BLOCO_LOOP  : '{' INI CMD FIM '}'
             {
@@ -484,6 +986,9 @@ BREAK_OR_CONTINUE :TK_BREAK ';'
                 $$.traducao += "\t" + string("goto ") + iniRotulo + ";\n"; 
             }
             ;
+
+
+
 
 SWITCH     : TK_SWITCH '(' E ')' BLOCO_SWITCH
             {
@@ -629,9 +1134,7 @@ EXPRESSAO   : TEXTO
                     $$.strcpy += $3.strcpy;
                     auxPrint += "\tstrcpy(" + $$.label + ", strcat(" + $$.label2 + ", " + $3.label2 + "));\n";
                     $$.traducao = $$.label;
-                }
-                
-                
+                } 
             }
             ;
 
@@ -760,12 +1263,12 @@ E		   : E '>' E
                     if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" && pilha[busca_escopo($3.label)][$3.label].tipo == "string"){
                         yyerror("ERRO: Tipos difentes!");
                     }
-                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" && $3.tipo != "int"){
+                    if(pilha[busca_escopo($1.label)][$1.label].tipo == "int" && pilha[busca_escopo($3.label)][$3.label].tipo != "int"){
                         yyerror("ERRO: Tipos difentes!");
                     }
                     if(pilha[busca_escopo($3.label)][$3.label].tipo == "string" && pilha[busca_escopo($1.label)][$1.label].tipo != "string"){
                     yyerror("ERRO: Tipos difentes!");
-                }
+                    }
                     
                     if(pilha[busca_escopo($1.label)][$1.label].tipo == "float" && pilha[busca_escopo($3.label)][$3.label].tipo == "int"){
                         pilha[busca_escopo($1.label)][$1.label].atribuido = 1;
@@ -789,10 +1292,12 @@ E		   : E '>' E
                                 pilha[busca_escopo($1.label)][$1.label].valor = $3.valor;
                                 $$.traducao += "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + string("(char*) malloc(") + to_string(pilha[busca_escopo($3.label)][$3.label].valor.length()-1) + string(")") + ";\n";
                                 $$.traducao += "\t" + string("strcpy(") + pilha[busca_escopo($1.label)][$1.label].temp + string(", ") + pilha[busca_escopo($3.label)][$3.label].temp + ");\n";
-                            }else{
+                                pilha_malloc.push_back(pilha[busca_escopo($1.label)][$1.label].temp);
+                            }
+                            else{
                                 $$.traducao += $1.traducao + $3.traducao + "\t" + pilha[busca_escopo($1.label)][$1.label].temp + " = " + pilha[busca_escopo($3.label)][$3.label].temp + ";\n";
                             }
-                        pilha_malloc.push_back(pilha[busca_escopo($1.label)][$1.label].temp);
+                        
                     }
                 }
                 else{
@@ -864,11 +1369,12 @@ E		   : E '>' E
             | TK_NUM
             {
 				$$.tipo = "int";
+                $$.valor = $1.label;
 				$$.label = genTemp();
 				$$.declaracao += "\t" + $$.tipo + " " + $$.label + ";\n";
 				$$.traducao += "\t" + $$.label + " = " + $1.label + ";\n";
 
-                //$$.label = $1.label;
+                $$.valor = $1.label;
             }
             | TK_REAL 
             {
@@ -971,6 +1477,10 @@ E		   : E '>' E
                 naoDeclarado($1.label);
                 //TIPO_SIMBOLO var = pilha[bloco_atual][$1.label];
                 //$$.tipo = var.tipo;
+            }
+            | TK_ID '[' E ']'
+            {
+                $$.label = $1.label + '[' + $3.label + ']';
             }
             |
             {
@@ -1329,6 +1839,7 @@ int main( int argc, char* argv[] )
 
 void yyerror( string MSG )
 {
-	cout << MSG << endl;
+	cout << "Linha " + to_string(contn) + " -> " + MSG << endl;
+    //cout << MSG << endl;
 	exit (0);
 }
