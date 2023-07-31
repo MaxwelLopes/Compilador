@@ -18,7 +18,7 @@ Este é o repositório do compilador que implementei durante o 5º período da d
 
 Para começar, clone este repositório em seu computador:
 
-git clone https://github.com/MaxwelLopes/Compiladores.git
+git clone https://github.com/MaxwelLopes/Compilador.git
 
 
 Navegue até o diretório do projeto, abra o arquivo "exemplo.foca" em um editor de texto de sua preferência e digite o código que deseja compilar.
